@@ -48,7 +48,10 @@ def route(train):
     return r.merge(H,on="section_number",how="left") if not r.empty else r
 
 def live_api(train,date=None):
-    if not KEY: raise RuntimeError("RAILRADAR_API_KEY is missing in backend/.env")
+    if not KEY:
+    raise RuntimeError(
+        "RAILRADAR_API_KEY environment variable is missing."
+    )
     params={"date":date} if date else {}
     r=requests.get(f"{API.rstrip('/')}/trains/{train}/live",
                    headers={"Authorization":f"Bearer {KEY}"},params=params,timeout=30)
