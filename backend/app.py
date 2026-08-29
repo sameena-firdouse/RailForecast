@@ -1,4 +1,5 @@
 import os
+import json
 from pathlib import Path
 from datetime import datetime
 import traceback
@@ -142,7 +143,120 @@ def get_forecast(train):
                        source="RailRadar + historical patterns + Random Forest V2")
     except Exception as e:
         traceback.print_exc(); return jsonify(success=False,error=str(e)),500
+# ---------------- TRACK MAINTENANCE ----------------
 
+MAINTENANCE_FILE = os.path.join(
+    os.path.dirname(__file__),
+    "maintenance.json"
+)
+
+def load_maintenance():
+    if not os.path.exists(MAINTENANCE_FILE):
+        return []
+    try:
+        with open(MAINTENANCE_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+def save_maintenance(data):
+    with open(MAINTENANCE_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+
+
+@app.get("/api/maintenance")
+def get_maintenance():
+    return jsonify(
+        success=True,
+        maintenance=load_maintenance()
+    )
+
+
+@app.post("/api/maintenance")
+def add_maintenance():
+    try:
+        body = request.get_json(force=True) or {}
+
+        required = [
+            "from_station",
+            "to_station",
+            "from_km",
+            "to_km",
+            "repair_type",
+            "normal_speed",
+            "restricted_speed",
+            "start_time",
+            "end_time"
+        ]
+
+        missing = [
+            x for x in required
+            if str(body.get(x, "")).strip() == ""
+        ]
+
+        if missing:
+            return jsonify(
+                success=False,
+                error="Missing fields: " + ", ".join(missing)
+            ), 400
+
+        records = load_maintenance()
+
+        next_id = max(
+            [int(x.get("id", 0)) for x in records] or [0]
+        ) + 1
+
+        record = {
+            "id": next_id,
+            "from_station": str(body["from_station"]).strip(),
+            "to_station": str(body["to_station"]).strip(),
+            "from_km": float(body["from_km"]),
+            "to_km": float(body["to_km"]),
+            "repair_type": str(body["repair_type"]).strip(),
+            "normal_speed": float(body["normal_speed"]),
+            "restricted_speed": float(body["restricted_speed"]),
+            "start_time": str(body["start_time"]),
+            "end_time": str(body["end_time"]),
+            "notes": str(body.get("notes", "")).strip()
+        }
+
+        records.append(record)
+        save_maintenance(records)
+
+        return jsonify(
+            success=True,
+            maintenance=record
+        ), 201
+
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify(
+            success=False,
+            error=str(e)
+        ), 500
+
+
+@app.delete("/api/maintenance/<int:maintenance_id>")
+def delete_maintenance(maintenance_id):
+    records = load_maintenance()
+
+    updated = [
+        x for x in records
+        if int(x.get("id", 0)) != maintenance_id
+    ]
+
+    if len(updated) == len(records):
+        return jsonify(
+            success=False,
+            error="Maintenance restriction not found"
+        ), 404
+
+    save_maintenance(updated)
+
+    return jsonify(
+        success=True,
+        message="Maintenance restriction removed"
+    )
 if __name__=="__main__":
     print("RailForecast: http://127.0.0.1:5000")
     app.run(host="0.0.0.0",port=int(os.getenv("PORT","5000")),debug=False)
