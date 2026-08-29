@@ -1,12 +1,234 @@
-const $=x=>document.getElementById(x);
-function show(x){["home","passenger","department","maintenance"].forEach(s=>{const e=$(s);if(e)e.classList.toggle("hide",s!==x)});scrollTo(0,0)}
-function home(){show("home")} function passenger(){show("passenger")} function department(){show("department")} function maintenance(){show("maintenance");loadMaintenance()}
-const API_BASE=(window.RAILFORECAST_API||"").replace(/\/$/,"");
-function err(x){const e=$("err");e.textContent=x;e.classList.remove("hide")}
-async function forecast(){const t=$("train").value.trim(),d=$("date").value,s=$("from").value.trim();if(!t)return err("Enter a train number.");if(!API_BASE)return err("Backend API URL is not configured.");$("err").classList.add("hide");try{const q=new URLSearchParams();if(d)q.set("date",d);if(s)q.set("station",s);const r=await fetch(`${API_BASE}/api/forecast/${encodeURIComponent(t)}?${q}`),x=await r.json();if(!r.ok||!x.success)throw Error(x.error||"Forecast failed");render(x)}catch(e){err(e.message)}}
-function render(x){const t=x.train;$("result").classList.remove("hide");$("title").textContent=t.number+(t.name?" · "+t.name:"");$("route").textContent=(t.current_name||t.current_code||"Unknown")+" → "+(t.next_name||t.next_code||"—");$("cur").textContent=t.current_name||t.current_code||"—";$("delay").textContent=`${t.delay>=0?"+":""}${Number(t.delay).toFixed(1)} min`;$("next").textContent=t.next_name||t.next_code||"—";$("updated").textContent=new Date(x.generated_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});$("timeline").innerHTML=x.predictions.map((p,i)=>{const c=p.predicted_delay_min<=2?"good":p.predicted_delay_min<=10?"mid":"bad";const m=p.maintenance_impact_min>0?`<br><small class="maint">⚠ Maintenance +${p.maintenance_impact_min} min</small>`:"";return `<div class="r"><b>${i===0?"●":"│"}</b><div><b>${esc(p.to_station||p.to_code)}</b><br><small>${esc(p.to_code||"")}</small></div><div><b>${p.predicted_eta}</b><br><small>Scheduled ${p.scheduled_eta}</small></div><div class="${c}"><b>${p.predicted_delay_min>0?"+":""}${p.predicted_delay_min.toFixed(1)} min</b>${m}<br><small>${p.confidence_percent}% confidence</small></div><b class="badge ${c}">${p.status}</b></div>`}).join("")}
-function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
-async function addMaintenance(){const body={from_station:$("mfrom").value.trim(),to_station:$("mto").value.trim(),from_km:$("mfromkm").value,to_km:$("mtokm").value,repair_type:$("mtype").value,normal_speed:$("mnormal").value,restricted_speed:$("mrestrict").value,start_time:$("mstart").value,end_time:$("mend").value,notes:$("mnotes").value};try{const r=await fetch(`${API_BASE}/api/maintenance`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}),x=await r.json();if(!r.ok||!x.success)throw Error(x.error||"Could not save restriction");alert("Maintenance restriction published successfully.");document.querySelectorAll("#maintenance input,#maintenance textarea").forEach(e=>e.value="");loadMaintenance()}catch(e){alert(e.message)}}
-async function loadMaintenance(){try{const r=await fetch(`${API_BASE}/api/maintenance`),x=await r.json();$("mlist").innerHTML=(x.maintenance||[]).map(m=>`<div class="mitem"><b>🟠 ${esc(m.from_station)} → ${esc(m.to_station)}</b><span>${esc(m.repair_type)} · ${m.normal_speed} → ${m.restricted_speed} km/h</span><small>${m.start_time} to ${m.end_time}</small><button onclick="removeMaintenance(${m.id})">Remove</button></div>`).join("")||"<p class=note>No active restrictions.</p>"}catch(e){$("mlist").textContent="Unable to load maintenance data."}}
-async function removeMaintenance(id){if(!confirm("Remove this maintenance restriction?"))return;await fetch(`${API_BASE}/api/maintenance/${id}`,{method:"DELETE"});loadMaintenance()}
-$("train").addEventListener("keydown",e=>{if(e.key==="Enter")forecast()});
+const $ = (id) => document.getElementById(id);
+
+function show(screen) {
+    ["home", "passenger", "department"].forEach((s) => {
+        const el = $(s);
+        if (el) {
+            el.classList.toggle("hide", s !== screen);
+        }
+    });
+
+    window.scrollTo(0, 0);
+}
+
+function home() {
+    show("home");
+}
+
+function passenger() {
+    show("passenger");
+}
+
+function department() {
+    show("department");
+}
+
+const API_BASE = (window.RAILFORECAST_API || "").replace(/\/$/, "");
+
+async function forecast() {
+    const train = $("train").value.trim();
+    const date = $("date").value;
+    const station = $("from").value.trim();
+
+    if (!train) {
+        showError("Enter a train number.");
+        return;
+    }
+
+    if (!API_BASE) {
+        showError("Backend API URL is not configured.");
+        return;
+    }
+
+    $("err").classList.add("hide");
+
+    try {
+        const params = new URLSearchParams();
+
+        if (date) {
+            params.set("date", date);
+        }
+
+        if (station) {
+            params.set("station", station);
+        }
+
+        const url =
+            `${API_BASE}/api/forecast/${encodeURIComponent(train)}` +
+            `?${params.toString()}`;
+
+        console.log("Calling:", url);
+
+        const response = await fetch(url);
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(
+                data.error || "Unable to generate forecast."
+            );
+        }
+
+        render(data);
+
+    } catch (error) {
+        console.error(error);
+
+        showError(
+            error.message ||
+            "Unable to connect to RailForecast backend."
+        );
+    }
+}
+
+function showError(message) {
+    const errorBox = $("err");
+
+    errorBox.textContent = message;
+    errorBox.classList.remove("hide");
+}
+
+function render(data) {
+
+    const train = data.train;
+
+    $("result").classList.remove("hide");
+
+    $("title").textContent =
+        train.number +
+        (train.name ? " · " + train.name : "");
+
+    $("route").textContent =
+        (train.current_name ||
+            train.current_code ||
+            "Unknown") +
+        " → " +
+        (train.next_name ||
+            train.next_code ||
+            "—");
+
+    $("cur").textContent =
+        train.current_name ||
+        train.current_code ||
+        "—";
+
+    $("delay").textContent =
+        `${train.delay >= 0 ? "+" : ""}` +
+        `${Number(train.delay).toFixed(1)} min`;
+
+    $("next").textContent =
+        train.next_name ||
+        train.next_code ||
+        "—";
+
+    $("updated").textContent =
+        new Date(data.generated_at).toLocaleTimeString(
+            [],
+            {
+                hour: "2-digit",
+                minute: "2-digit"
+            }
+        );
+
+    const timeline = $("timeline");
+
+    timeline.innerHTML = data.predictions
+        .map((p, index) => {
+
+            const delay = Number(
+                p.predicted_delay_min
+            );
+
+            let statusClass = "bad";
+
+            if (delay <= 2) {
+                statusClass = "good";
+            } else if (delay <= 10) {
+                statusClass = "mid";
+            }
+
+            return `
+                <div class="r">
+
+                    <b>
+                        ${index === 0 ? "●" : "│"}
+                    </b>
+
+                    <div>
+                        <b>
+                            ${escapeHtml(
+                                p.to_station ||
+                                p.to_code ||
+                                "Unknown"
+                            )}
+                        </b>
+
+                        <br>
+
+                        <small>
+                            ${escapeHtml(
+                                p.to_code || ""
+                            )}
+                        </small>
+                    </div>
+
+                    <div>
+                        <b>
+                            ${p.predicted_eta}
+                        </b>
+
+                        <br>
+
+                        <small>
+                            Scheduled ${p.scheduled_eta}
+                        </small>
+                    </div>
+
+                    <div class="${statusClass}">
+                        <b>
+                            ${delay > 0 ? "+" : ""}
+                            ${delay.toFixed(1)} min
+                        </b>
+
+                        <br>
+
+                        <small class="confidence">
+                            ${p.confidence_percent}%
+                            confidence
+                        </small>
+                    </div>
+
+                    <b class="badge ${statusClass}">
+                        ${p.status}
+                    </b>
+
+                </div>
+            `;
+        })
+        .join("");
+}
+
+function escapeHtml(value) {
+
+    return String(value ?? "").replace(
+        /[&<>"']/g,
+        (char) => ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#039;"
+        })[char]
+    );
+}
+
+$("train").addEventListener(
+    "keydown",
+    (event) => {
+
+        if (event.key === "Enter") {
+            forecast();
+        }
+
+    }
+);
