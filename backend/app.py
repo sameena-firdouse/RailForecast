@@ -49,7 +49,7 @@ def route(train):
 
 def live_api(train,date=None):
     if not KEY:
-    raise RuntimeError(
+      raise RuntimeError(
         "RAILRADAR_API_KEY environment variable is missing."
     )
     params={"date":date} if date else {}
