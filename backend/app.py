@@ -71,8 +71,44 @@ def normalize(x):
             "current_name":cl.get("stationName") or x.get("currentStationName"),
             "next_code":nh.get("stationCode") or nh.get("code"),
             "next_name":nh.get("stationName") or nh.get("name")}
+def maintenance_impact(row):
+    """
+    Calculate extra running time caused by an active
+    track speed restriction on this section.
+    """
+    impacts = load_maintenance()
 
+    from_station = str(row.get("from_station", "")).strip().lower()
+    to_station = str(row.get("to_station", "")).strip().lower()
+
+    normal_running = num(row.get("scheduled_running_time_min"))
+
+    if normal_running <= 0:
+        return 0.0
+
+    total_impact = 0.0
+
+    for m in impacts:
+        mf = str(m.get("from_station", "")).strip().lower()
+        mt = str(m.get("to_station", "")).strip().lower()
+
+        # Match the maintenance restriction to this route section
+        if mf == from_station and mt == to_station:
+            normal_speed = num(m.get("normal_speed"))
+            restricted_speed = num(m.get("restricted_speed"))
+
+            if normal_speed > 0 and 0 < restricted_speed < normal_speed:
+                restricted_running = (
+                    normal_running * normal_speed / restricted_speed
+                )
+
+                total_impact += (
+                    restricted_running - normal_running
+                )
+
+    return max(0.0, total_impact)
 def forecast(train,station,delay):
+
     r=route(train)
     if r.empty: raise RuntimeError(f"No historical route data found for train {train}")
     q=str(station or "").strip().lower()
@@ -94,8 +130,19 @@ def forecast(train,station,delay):
         "historical_avg_running_time":num(row.get("historical_avg_running_time")),
         "previous_delay_change":prevchg,"previous_arrival_delay":prevarr,
         "previous_running_time":prevrun,"cumulative_previous_delay":cum}
-        change=num(model.predict(pd.DataFrame([vals],columns=FEATURES).fillna(0))[0])
-        pred=max(0,cur+change)
+        change = num(
+            model.predict(
+                pd.DataFrame([vals], columns=FEATURES).fillna(0)
+            )[0]
+        )
+
+        # Add active track-maintenance speed restriction impact
+        maintenance_impact_value = maintenance_impact(row)
+
+        pred = max(
+            0,
+            cur + change + maintenance_impact_value
+        )
         sa=pd.to_datetime(row.get("scheduled_arrival"),errors="coerce")
         eta=(sa+pd.Timedelta(minutes=pred)).strftime("%H:%M") if not pd.isna(sa) else "--"
         rec=num(row.get("historical_recovery_rate"))*100
@@ -107,6 +154,7 @@ def forecast(train,station,delay):
         "scheduled_eta":sa.strftime("%H:%M") if not pd.isna(sa) else "--",
         "predicted_eta":eta,"predicted_delay_min":round(pred,1),
         "predicted_delay_change":round(change,1),
+"maintenance_impact_min":round(maintenance_impact_value,1),
         "recovery_probability_percent":round(rec,1),
         "confidence_percent":round(conf,1),"status":status})
         prevchg,prevarr,prevrun,cum,cur=change,pred,num(row.get("historical_avg_running_time"),prevrun),pred,pred
