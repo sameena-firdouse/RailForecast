@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: railforecast-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r ../requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: RAILRADAR_API_KEY
+        sync: false
+      - key: RAILRADAR_API_BASE
+        value: https://api.railradar.in/v1
