@@ -1,8 +1,1452 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RailForecast</title><link rel="stylesheet" href="style.css"></head><body>
-<header><div class="brand" onclick="home()">🚆 <b>RailForecast</b><small>AI-Powered Dynamic Train ETA</small></div><span>● LIVE INTELLIGENCE</span></header>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>RailForecast | AI-Powered Dynamic Train ETA</title>
+
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/chart.js"
+        defer
+    ></script>
+</head>
+
+
+<body>
+
+
+<!-- =========================================
+     HEADER
+========================================= -->
+
+<header class="topbar">
+
+    <div
+        class="brand"
+        onclick="home()"
+    >
+
+        <div class="brand-icon">
+            🚆
+        </div>
+
+        <div>
+
+            <h2>
+                RailForecast
+            </h2>
+
+            <p>
+                AI-Powered Dynamic Train ETA
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div class="header-right">
+
+        <div class="live-indicator">
+
+            <span class="live-dot"></span>
+
+            LIVE INTELLIGENCE
+
+        </div>
+
+
+        <button
+            class="header-home"
+            onclick="home()"
+        >
+
+            Home
+
+        </button>
+
+    </div>
+
+</header>
+
+
+
 <main>
-<section id="home" class="screen hero"><div class="train">🚆</div><h1>Know where your train is.<br><em>Know where it will be.</em></h1><p>Dynamic ETA predictions using live running data, historical patterns and Random Forest ML.</p><div class="roles"><button onclick="passenger()">👤<h2>Passenger</h2><p>Track your train and see predicted upcoming ETAs.</p></button><button onclick="department()">🏢<h2>Railway Department</h2><p>Inspect delay propagation and section intelligence.</p></button></div></section>
-<section id="passenger" class="screen hide"><button class="back" onclick="home()">← Back</button><h2>Passenger · Find your train</h2><div class="card"><label>Train number or name</label><div class="search"><input id="train" value="12705"><button onclick="forecast()">🔍 Find Train</button></div><div class="filters"><div><label>From station (optional)</label><input id="from"></div><div><label>To station (optional)</label><input id="to"></div><div><label>Journey date</label><input id="date" type="date"></div></div><div id="err" class="error hide"></div></div><div id="result" class="hide"><div class="card status"><div><small>LIVE TRAIN STATUS</small><h2 id="title"></h2><p id="route"></p></div><b id="badge">LIVE</b></div><div class="metrics"><div><small>Current station</small><b id="cur"></b></div><div><small>Current delay</small><b id="delay"></b></div><div><small>Next station</small><b id="next"></b></div><div><small>Updated</small><b id="updated"></b></div></div><h2>AI Future Forecast</h2><div id="timeline" class="card"></div><p class="note">Live API → current delay → historical section patterns → Random Forest V2 → sequential future ETA</p></div></section>
-<section id="department" class="screen hide"><button class="back" onclick="home()">← Back</button><div class="card dept"><div>🏢</div><h2>Railway Department</h2><p>Manage operational intelligence and track restrictions.</p><button onclick="passenger()">Open Train Forecast</button><button onclick="maintenance()">🛠 Track Maintenance</button></div></section>
-<section id="maintenance" class="screen hide"><button class="back" onclick="department()">← Back</button><h2>🛠 Track Maintenance Department</h2><p class="note">Publish active repair and temporary speed restrictions. Active restrictions are automatically included in future ETA calculations.</p><div class="card maintform"><div class="filters"><div><label>From station</label><input id="mfrom" placeholder="Vijayawada"></div><div><label>To station</label><input id="mto" placeholder="Madhira"></div><div><label>Repair type</label><select id="mtype"><option>Track repair</option><option>Track renewal</option><option>Emergency repair</option><option>Maintenance work</option></select></div><div><label>From KM</label><input id="mfromkm" type="number" step="0.001"></div><div><label>To KM</label><input id="mtokm" type="number" step="0.001"></div><div><label>Normal speed (km/h)</label><input id="mnormal" type="number" value="100"></div><div><label>Restricted speed (km/h)</label><input id="mrestrict" type="number" value="50"></div><div><label>Start (ISO time)</label><input id="mstart" type="datetime-local"></div><div><label>End (ISO time)</label><input id="mend" type="datetime-local"></div></div><label>Notes</label><textarea id="mnotes" placeholder="Repair details..."></textarea><button class="publish" onclick="addMaintenance()">🚧 Publish Restriction</button></div><h2>Active Restrictions</h2><div id="mlist" class="card mlist"></div></section>
-</main><script src="config.js"></script><script src="script.js"></script></body></html>
+
+
+<!-- =========================================
+     HOME PAGE
+========================================= -->
+
+<section
+    id="home"
+    class="screen hero-screen"
+>
+
+
+    <div class="hero-content">
+
+
+        <div class="hero-badge">
+
+            <span class="live-dot"></span>
+
+            REAL-TIME RAIL INTELLIGENCE
+
+        </div>
+
+
+        <div class="hero-train">
+
+            🚆
+
+        </div>
+
+
+        <h1>
+
+            Know where your train is.
+
+            <span>
+                Know where it will be.
+            </span>
+
+        </h1>
+
+
+        <p class="hero-description">
+
+            Dynamic train ETA prediction using live train movement,
+            historical railway patterns and machine learning.
+
+        </p>
+
+
+        <div class="role-grid">
+
+
+            <button
+                class="role-card passenger-role"
+                onclick="passenger()"
+            >
+
+                <div class="role-icon">
+
+                    👤
+
+                </div>
+
+
+                <div>
+
+                    <h2>
+                        Passenger
+                    </h2>
+
+                    <p>
+
+                        Track your train, journey progress and
+                        predicted upcoming ETAs.
+
+                    </p>
+
+                </div>
+
+
+                <span class="role-arrow">
+
+                    →
+
+                </span>
+
+            </button>
+
+
+
+            <button
+                class="role-card department-role"
+                onclick="department()"
+            >
+
+                <div class="role-icon">
+
+                    🏢
+
+                </div>
+
+
+                <div>
+
+                    <h2>
+                        Railway Department
+                    </h2>
+
+                    <p>
+
+                        Monitor operational intelligence,
+                        disruptions and infrastructure restrictions.
+
+                    </p>
+
+                </div>
+
+
+                <span class="role-arrow">
+
+                    →
+
+                </span>
+
+            </button>
+
+
+        </div>
+
+
+    </div>
+
+
+</section>
+
+
+
+<!-- =========================================
+     PASSENGER PAGE
+========================================= -->
+
+<section
+    id="passenger"
+    class="screen hide"
+>
+
+
+    <!-- PAGE HEADER -->
+
+    <div class="page-top">
+
+        <div>
+
+            <button
+                class="back-btn"
+                onclick="home()"
+            >
+
+                ← Back
+
+            </button>
+
+
+            <h1 class="page-title">
+
+                Find Your Train
+
+            </h1>
+
+
+            <p class="page-subtitle">
+
+                Get live train status and AI-powered ETA predictions.
+
+            </p>
+
+        </div>
+
+
+    </div>
+
+
+
+    <!-- SEARCH CARD -->
+
+    <div class="search-card card">
+
+
+        <div class="search-title">
+
+            <div>
+
+                <span class="section-label">
+
+                    TRAIN SEARCH
+
+                </span>
+
+
+                <h2>
+
+                    Search your journey
+
+                </h2>
+
+            </div>
+
+
+        </div>
+
+
+
+        <label>
+
+            Train Number or Name
+
+        </label>
+
+
+        <div class="search-row">
+
+
+            <input
+                id="train"
+                value="12705"
+                placeholder="Example: 12705"
+            >
+
+
+            <button
+                class="primary-btn"
+                onclick="forecast()"
+            >
+
+                🔍 Find Train
+
+            </button>
+
+
+        </div>
+
+
+
+        <div class="filters">
+
+
+            <div>
+
+                <label>
+
+                    From Station
+                    <span>(Optional)</span>
+
+                </label>
+
+
+                <input
+                    id="from"
+                    placeholder="Example: Guntur"
+                >
+
+            </div>
+
+
+
+            <div>
+
+                <label>
+
+                    Your Destination
+                    <span>(Optional)</span>
+
+                </label>
+
+
+                <input
+                    id="to"
+                    placeholder="Example: Secunderabad"
+                >
+
+            </div>
+
+
+
+            <div>
+
+                <label>
+
+                    Journey Date
+
+                </label>
+
+
+                <input
+                    id="date"
+                    type="date"
+                >
+
+            </div>
+
+
+        </div>
+
+
+
+        <div
+            id="err"
+            class="error hide"
+        ></div>
+
+
+    </div>
+
+
+
+    <!-- =====================================
+         LOADING
+    ====================================== -->
+
+    <div
+        id="loading"
+        class="loading-card hide"
+    >
+
+        <div class="loader"></div>
+
+        <div>
+
+            <b>
+
+                Generating Dynamic ETA Forecast
+
+            </b>
+
+            <p>
+
+                Analyzing live train status,
+                historical patterns and ML predictions...
+
+            </p>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- =====================================
+         RESULTS
+    ====================================== -->
+
+    <div
+        id="result"
+        class="hide"
+    >
+
+
+
+        <!-- TRAIN OVERVIEW -->
+
+        <div class="train-overview card">
+
+
+            <div class="train-main-info">
+
+
+                <span class="section-label">
+
+                    LIVE TRAIN STATUS
+
+                </span>
+
+
+                <h2 id="title">
+
+                    Train
+
+                </h2>
+
+
+                <p id="route">
+
+                    Loading route...
+
+                </p>
+
+
+            </div>
+
+
+
+            <div class="live-status-badge">
+
+                <span class="live-dot"></span>
+
+                LIVE
+
+            </div>
+
+
+        </div>
+
+
+
+        <!-- METRICS -->
+
+        <div class="metrics-grid">
+
+
+            <div class="metric-card">
+
+                <span class="metric-icon">
+
+                    📍
+
+                </span>
+
+
+                <div>
+
+                    <small>
+
+                        CURRENT STATION
+
+                    </small>
+
+
+                    <b id="cur">
+
+                        —
+
+                    </b>
+
+                </div>
+
+            </div>
+
+
+
+            <div class="metric-card">
+
+                <span class="metric-icon">
+
+                    ⏱
+
+                </span>
+
+
+                <div>
+
+                    <small>
+
+                        CURRENT DELAY
+
+                    </small>
+
+
+                    <b id="delay">
+
+                        —
+
+                    </b>
+
+                </div>
+
+            </div>
+
+
+
+            <div class="metric-card">
+
+                <span class="metric-icon">
+
+                    ➜
+
+                </span>
+
+
+                <div>
+
+                    <small>
+
+                        NEXT STATION
+
+                    </small>
+
+
+                    <b id="next">
+
+                        —
+
+                    </b>
+
+                </div>
+
+            </div>
+
+
+
+            <div class="metric-card">
+
+                <span class="metric-icon">
+
+                    ↻
+
+                </span>
+
+
+                <div>
+
+                    <small>
+
+                        LAST UPDATED
+
+                    </small>
+
+
+                    <b id="updated">
+
+                        —
+
+                    </b>
+
+                </div>
+
+            </div>
+
+
+        </div>
+
+
+
+        <!-- =================================
+             JOURNEY PROGRESS
+        ================================== -->
+
+        <div class="card journey-card">
+
+
+            <div class="section-heading">
+
+
+                <div>
+
+                    <span class="section-label">
+
+                        YOUR JOURNEY
+
+                    </span>
+
+
+                    <h2>
+
+                        Journey Progress
+
+                    </h2>
+
+                </div>
+
+
+                <div
+                    id="journey-percent"
+                    class="journey-percent"
+                >
+
+                    —
+
+                </div>
+
+
+            </div>
+
+
+
+            <div class="journey-route">
+
+
+                <div
+                    id="journey-from"
+                    class="journey-station"
+                >
+
+                    —
+
+                </div>
+
+
+                <div
+                    id="journey-to"
+                    class="journey-station destination"
+                >
+
+                    —
+
+                </div>
+
+
+            </div>
+
+
+
+            <div class="progress-track">
+
+
+                <div
+                    id="journey-progress"
+                    class="progress-fill"
+                    style="width:0%"
+                ></div>
+
+
+                <div
+                    id="progress-marker"
+                    class="progress-marker"
+                    style="left:0%"
+                >
+
+                    🚆
+
+                </div>
+
+
+            </div>
+
+
+
+            <p
+                id="journey-status"
+                class="journey-status"
+            >
+
+                Waiting for train information...
+
+            </p>
+
+
+        </div>
+
+
+
+        <!-- =================================
+             ACTIVE DELAY IMPACT
+        ================================== -->
+
+        <div
+            id="impact-section"
+            class="card impact-card hide"
+        >
+
+
+            <div class="section-heading">
+
+
+                <div>
+
+                    <span class="section-label">
+
+                        REAL-TIME INTELLIGENCE
+
+                    </span>
+
+
+                    <h2>
+
+                        Active Delay Impacts
+
+                    </h2>
+
+                </div>
+
+
+                <div
+                    id="total-impact"
+                    class="impact-total"
+                >
+
+                    +0 min
+
+                </div>
+
+
+            </div>
+
+
+
+            <div
+                id="impact-summary"
+                class="impact-summary"
+            ></div>
+
+
+
+            <div
+                id="active-events"
+                class="event-list"
+            ></div>
+
+
+        </div>
+
+
+
+        <!-- =================================
+             ETA ACCURACY GRAPH
+        ================================== -->
+
+        <div class="card chart-card">
+
+
+            <div class="section-heading">
+
+
+                <div>
+
+                    <span class="section-label">
+
+                        MODEL PERFORMANCE
+
+                    </span>
+
+
+                    <h2>
+
+                        ETA Accuracy Improvement
+
+                    </h2>
+
+
+                    <p>
+
+                        Comparison between Dynamic AI ETA
+                        and the baseline ETA model.
+
+                    </p>
+
+                </div>
+
+
+            </div>
+
+
+            <div class="chart-wrapper">
+
+                <canvas
+                    id="accuracyChart"
+                ></canvas>
+
+            </div>
+
+
+        </div>
+
+
+
+        <!-- =================================
+             FUTURE FORECAST
+        ================================== -->
+
+        <div class="forecast-heading">
+
+
+            <div>
+
+                <span class="section-label">
+
+                    AI PREDICTION
+
+                </span>
+
+
+                <h2>
+
+                    Future ETA Forecast
+
+                </h2>
+
+
+                <p>
+
+                    Predicted station-by-station arrival
+                    information based on live and historical data.
+
+                </p>
+
+            </div>
+
+
+        </div>
+
+
+
+        <div
+            id="timeline"
+            class="forecast-list card"
+        ></div>
+
+
+
+        <!-- FORECAST EXPLANATION -->
+
+        <div class="forecast-method card">
+
+
+            <div class="method-icon">
+
+                🧠
+
+            </div>
+
+
+            <div>
+
+                <h3>
+
+                    How the ETA is calculated
+
+                </h3>
+
+
+                <p>
+
+                    Live train status → Historical section patterns →
+                    Real-time operational correction →
+                    Random Forest delay prediction →
+                    Sequential future ETA forecast.
+
+                </p>
+
+            </div>
+
+
+        </div>
+
+
+
+        <!-- MODEL NOTE -->
+
+        <div class="model-note">
+
+
+            <span>
+
+                🤖
+
+            </span>
+
+
+            <p>
+
+                <b>Current Model: Random Forest.</b>
+
+                The current model uses Random Forest due to the
+                limited availability of historical railway data.
+                As more historical data becomes available,
+                <b>XGBoost</b> is planned for future versions to
+                further improve prediction accuracy and model output.
+
+            </p>
+
+
+        </div>
+
+
+    </div>
+
+
+</section>
+
+
+
+<!-- =========================================
+     RAILWAY DEPARTMENT PAGE
+========================================= -->
+
+<section
+    id="department"
+    class="screen hide"
+>
+
+
+    <button
+        class="back-btn"
+        onclick="home()"
+    >
+
+        ← Back
+
+    </button>
+
+
+
+    <div class="department-hero card">
+
+
+        <div class="department-icon">
+
+            🏢
+
+        </div>
+
+
+        <div>
+
+            <span class="section-label">
+
+                RAILWAY OPERATIONS
+
+            </span>
+
+
+            <h1>
+
+                Railway Department
+
+            </h1>
+
+
+            <p>
+
+                Manage operational intelligence,
+                disruptions and infrastructure restrictions.
+
+            </p>
+
+        </div>
+
+
+    </div>
+
+
+
+    <div class="department-grid">
+
+
+        <div class="department-action card">
+
+
+            <div class="action-icon">
+
+                🚆
+
+            </div>
+
+
+            <h2>
+
+                Train Forecast
+
+            </h2>
+
+
+            <p>
+
+                View live train status and AI-powered
+                future ETA predictions.
+
+            </p>
+
+
+            <button
+                class="primary-btn"
+                onclick="passenger()"
+            >
+
+                Open Forecast →
+
+            </button>
+
+
+        </div>
+
+
+
+        <div class="department-action card">
+
+
+            <div class="action-icon">
+
+                🛠
+
+            </div>
+
+
+            <h2>
+
+                Track Maintenance
+
+            </h2>
+
+
+            <p>
+
+                Publish maintenance restrictions
+                and speed limitations.
+
+            </p>
+
+
+            <button
+                class="primary-btn"
+                onclick="maintenance()"
+            >
+
+                Manage Restrictions →
+
+            </button>
+
+
+        </div>
+
+
+    </div>
+
+
+</section>
+
+
+
+<!-- =========================================
+     MAINTENANCE PAGE
+========================================= -->
+
+<section
+    id="maintenance"
+    class="screen hide"
+>
+
+
+    <button
+        class="back-btn"
+        onclick="department()"
+    >
+
+        ← Back
+
+    </button>
+
+
+
+    <div class="maintenance-header">
+
+
+        <div>
+
+            <span class="section-label">
+
+                INFRASTRUCTURE MANAGEMENT
+
+            </span>
+
+
+            <h1>
+
+                Track Maintenance
+
+            </h1>
+
+
+            <p>
+
+                Publish active repairs and temporary speed restrictions.
+                Active restrictions can be included in future ETA calculations.
+
+            </p>
+
+        </div>
+
+
+    </div>
+
+
+
+    <!-- MAINTENANCE FORM -->
+
+    <div class="card maintenance-form">
+
+
+        <h2>
+
+            Publish New Restriction
+
+        </h2>
+
+
+
+        <div class="filters maintenance-grid">
+
+
+            <div>
+
+                <label>
+
+                    From Station
+
+                </label>
+
+
+                <input
+                    id="mfrom"
+                    placeholder="Example: Vijayawada"
+                >
+
+            </div>
+
+
+
+            <div>
+
+                <label>
+
+                    To Station
+
+                </label>
+
+
+                <input
+                    id="mto"
+                    placeholder="Example: Madhira"
+                >
+
+            </div>
+
+
+
+            <div>
+
+                <label>
+
+                    Repair Type
+
+                </label>
+
+
+                <select id="mtype">
+
+                    <option>
+                        Track Repair
+                    </option>
+
+                    <option>
+                        Track Renewal
+                    </option>
+
+                    <option>
+                        Emergency Repair
+                    </option>
+
+                    <option>
+                        Maintenance Work
+                    </option>
+
+                </select>
+
+            </div>
+
+
+
+            <div>
+
+                <label>
+
+                    From KM
+
+                </label>
+
+
+                <input
+                    id="mfromkm"
+                    type="number"
+                    step="0.001"
+                >
+
+            </div>
+
+
+
+            <div>
+
+                <label>
+
+                    To KM
+
+                </label>
+
+
+                <input
+                    id="mtokm"
+                    type="number"
+                    step="0.001"
+                >
+
+            </div>
+
+
+
+            <div>
+
+                <label>
+
+                    Normal Speed (km/h)
+
+                </label>
+
+
+                <input
+                    id="mnormal"
+                    type="number"
+                    value="100"
+                >
+
+            </div>
+
+
+
+            <div>
+
+                <label>
+
+                    Restricted Speed (km/h)
+
+                </label>
+
+
+                <input
+                    id="mrestrict"
+                    type="number"
+                    value="50"
+                >
+
+            </div>
+
+
+
+            <div>
+
+                <label>
+
+                    Start Time
+
+                </label>
+
+
+                <input
+                    id="mstart"
+                    type="datetime-local"
+                >
+
+            </div>
+
+
+
+            <div>
+
+                <label>
+
+                    End Time
+
+                </label>
+
+
+                <input
+                    id="mend"
+                    type="datetime-local"
+                >
+
+            </div>
+
+
+        </div>
+
+
+
+        <label>
+
+            Notes
+
+        </label>
+
+
+        <textarea
+            id="mnotes"
+            placeholder="Enter maintenance or repair details..."
+        ></textarea>
+
+
+
+        <button
+            class="primary-btn publish-btn"
+            onclick="addMaintenance()"
+        >
+
+            🚧 Publish Restriction
+
+        </button>
+
+
+    </div>
+
+
+
+    <!-- ACTIVE MAINTENANCE -->
+
+    <div class="maintenance-list-section">
+
+
+        <div class="section-heading">
+
+
+            <div>
+
+                <span class="section-label">
+
+                    ACTIVE OPERATIONS
+
+                </span>
+
+
+                <h2>
+
+                    Active Restrictions
+
+                </h2>
+
+            </div>
+
+
+        </div>
+
+
+
+        <div
+            id="mlist"
+            class="maintenance-list card"
+        >
+
+            <p class="note">
+
+                Loading active restrictions...
+
+            </p>
+
+        </div>
+
+
+    </div>
+
+
+</section>
+
+
+</main>
+
+
+
+<!-- =========================================
+     CONFIG + SCRIPT
+========================================= -->
+
+<script src="config.js"></script>
+
+<script src="script.js"></script>
+
+
+</body>
+
+</html>
