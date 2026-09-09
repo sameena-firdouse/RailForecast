@@ -1,12 +1,9 @@
 # ==========================================
 # ACTIVE EVENT MANAGER
 # ==========================================
-# Stores and manages active simulation and
-# Railway Authorized API events.
-# ==========================================
-
 
 from datetime import datetime
+import uuid
 
 
 # ==========================================
@@ -17,22 +14,80 @@ ACTIVE_EVENTS = []
 
 
 # ==========================================
+# NORMALIZE SECTION
+# ==========================================
+
+def normalize_section(section):
+
+    if not section:
+        return ""
+
+    normalized = str(section).lower()
+
+    normalized = normalized.replace(
+        "junction",
+        ""
+    )
+
+    normalized = normalized.replace(
+        "j.n.",
+        ""
+    )
+
+    normalized = normalized.replace(
+        "jn",
+        ""
+    )
+
+    normalized = normalized.replace(
+        "→",
+        ""
+    )
+
+    normalized = normalized.replace(
+        "->",
+        ""
+    )
+
+    normalized = normalized.replace(
+        "-",
+        ""
+    )
+
+    normalized = normalized.replace(
+        "to",
+        ""
+    )
+
+    normalized = normalized.replace(
+        " ",
+        ""
+    )
+
+    return normalized
+
+
+# ==========================================
 # ADD EVENT
 # ==========================================
 
 def add_event(event):
 
-    # Make a copy before storing
     event_data = dict(event)
 
-    # Add creation timestamp
+    # Unique event ID
+    event_data["event_id"] = str(
+        uuid.uuid4()
+    )
+
+    # Creation time
     event_data["created_at"] = (
         datetime.now().isoformat(
             timespec="seconds"
         )
     )
 
-    # Mark as active
+    # Mark active
     event_data["active"] = True
 
     ACTIVE_EVENTS.append(
@@ -58,6 +113,7 @@ def get_active_events():
             "active",
             True
         )
+
     ]
 
 
@@ -68,27 +124,22 @@ def get_active_events():
 def get_events_for_section(section):
 
     if not section:
-
         return []
 
-
-    target_section = str(
+    target_section = normalize_section(
         section
-    ).strip().lower()
-
+    )
 
     matching_events = []
 
-
     for event in get_active_events():
 
-        event_section = str(
+        event_section = normalize_section(
             event.get(
                 "section",
                 ""
             )
-        ).strip().lower()
-
+        )
 
         if event_section == target_section:
 
@@ -96,31 +147,30 @@ def get_events_for_section(section):
                 event
             )
 
-
     return matching_events
 
 
 # ==========================================
-# REMOVE EVENT
+# REMOVE EVENT BY EVENT ID
 # ==========================================
 
-def remove_event(event_index):
+def remove_event(event_id):
 
-    if (
-        event_index < 0
-        or event_index >= len(
-            ACTIVE_EVENTS
-        )
+    for i, event in enumerate(
+        ACTIVE_EVENTS
     ):
 
-        return False
+        if event.get(
+            "event_id"
+        ) == event_id:
 
+            ACTIVE_EVENTS.pop(
+                i
+            )
 
-    ACTIVE_EVENTS.pop(
-        event_index
-    )
+            return True
 
-    return True
+    return False
 
 
 # ==========================================
