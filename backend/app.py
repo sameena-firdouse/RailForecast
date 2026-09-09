@@ -1634,12 +1634,12 @@ def get_forecast(
                 },
 
 
-                predictions:
+            predictions=
 
                     predictions,
 
 
-                generated_at:
+                generated_at=
 
                     datetime.now().isoformat(
 
@@ -1799,12 +1799,12 @@ def get_forecast(
             },
 
 
-            predictions:
+            predictions=
 
                 predictions,
 
 
-            generated_at:
+            generated_at=
 
                 datetime.now().isoformat(
 
