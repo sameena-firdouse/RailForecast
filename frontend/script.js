@@ -3235,3 +3235,99 @@ document.addEventListener(
     }
 
 );
+function apiUrl(path) {
+    return `${API_BASE}${path}`;
+}
+async function loadActiveEvents() {
+
+    try {
+
+        const response = await fetch(
+            apiUrl("/api/events")
+        );
+
+        const data = await response.json();
+
+        if (!data.success) {
+            throw new Error(
+                data.error ||
+                "Failed to load events"
+            );
+        }
+
+        return data.events || [];
+
+    } catch (error) {
+
+        console.error(
+            "Active events error:",
+            error
+        );
+
+        return [];
+    }
+}
+async function submitSimulationEvent(eventData) {
+
+    try {
+
+        const response = await fetch(
+            apiUrl("/api/simulation/event"),
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify(eventData)
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(
+                data.error ||
+                "Failed to create simulation event"
+            );
+        }
+
+        console.log(
+            "Simulation event created:",
+            data.event
+        );
+
+        return data.event;
+
+    } catch (error) {
+
+        console.error(
+            "Simulation API error:",
+            error
+        );
+
+        throw error;
+    }
+}
+async function clearActiveEvents() {
+
+    const response = await fetch(
+        apiUrl("/api/events"),
+        {
+            method: "DELETE"
+        }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+
+        throw new Error(
+            data.error ||
+            "Failed to clear events"
+        );
+    }
+
+    return data;
+}
