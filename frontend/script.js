@@ -1854,12 +1854,10 @@ function renderRailwayNetwork(
     train = {}
 ) {
 
-
     const network =
         document.getElementById(
             "rail-network"
         );
-
 
     if (!network) {
 
@@ -1867,160 +1865,267 @@ function renderRailwayNetwork(
 
     }
 
-
-    network.innerHTML =
-        "";
-
-
     if (
-
         !stations ||
-
         stations.length === 0
-
     ) {
+
+        network.innerHTML = `
+            <div class="no-data">
+                No live route data available.
+            </div>
+        `;
+
+        network._trackPath = null;
+        network._points = null;
 
         return;
 
     }
 
-
-    stations.forEach(
-        station => {
-
-
-            const stationElement =
-
-                document.createElement(
-                    "div"
-                );
-
-
-            stationElement.className =
-                "network-station";
-
-
-            const code =
-
-                station.to_code ||
-
-                station.code ||
-
-                station.station_code ||
-
-                "";
-
-
-            stationElement.dataset.code =
-                code;
-
-
-            const name =
-
-                station.to_station ||
-
-                station.station ||
-
-                station.station_name ||
-
-                "Station";
-
-
-            const currentCode =
-
-                train.current_code ||
-
-                train.currentCode ||
-
-                "";
-
-
-            const isCurrent =
-
-                code === currentCode;
-
-
-            stationElement.innerHTML = `
-
-                <div class="network-station-marker">
-
-                    ${
-
-                        isCurrent
-
-                            ? "🚆"
-
-                            : "●"
-
-                    }
-
-                </div>
-
-
-                <div class="network-station-info">
-
-                    <b>
-
-                        ${code}
-
-                    </b>
-
-
-                    <span>
-
-                        ${name}
-
-                    </span>
-
-                </div>
-
-            `;
-
-
-            if (isCurrent) {
-
-                stationElement.classList.add(
-                    "current-network-station"
-                );
-
-            }
-
-
-            network.appendChild(
-                stationElement
-            );
-
-        }
-
-    );
-
+    const currentCode =
+        train.current_code ||
+        train.currentCode ||
+        "";
 
     /* =====================================
-       ADD LIVE TRAIN MARKER
+       LAYOUT CONSTANTS
+       (a winding vertical "S" route, like
+       a train-tracker line map)
     ===================================== */
 
-    const trainMarker =
+    const width = 640;
+    const rowHeight = 118;
+    const topPad = 46;
+    const bottomPad = 46;
+    const leftX = 210;
+    const rightX = width - 210;
 
-        document.createElement(
-            "div"
+    const height =
+        topPad +
+        bottomPad +
+        (stations.length - 1) * rowHeight;
+
+    const points =
+        stations.map(
+            (station, i) => ({
+                x: i % 2 === 0 ? leftX : rightX,
+                y: topPad + (i * rowHeight),
+                station
+            })
         );
 
+    /* =====================================
+       SMOOTH CURVED PATH THROUGH POINTS
+       Vertical tangents at every station
+       keep the curve continuous (C1),
+       producing a flowing S-shaped track.
+    ===================================== */
 
-    trainMarker.id =
-        "live-network-train";
+    let pathData =
+        `M ${points[0].x} ${points[0].y}`;
 
+    for (let i = 1; i < points.length; i++) {
 
-    trainMarker.className =
-        "live-network-train";
+        const prev = points[i - 1];
+        const curr = points[i];
+        const midY = (prev.y + curr.y) / 2;
 
+        pathData +=
+            ` C ${prev.x} ${midY}, ${curr.x} ${midY}, ${curr.x} ${curr.y}`;
 
-    trainMarker.textContent =
-        "🚆";
+    }
 
+    /* =====================================
+       STATION NODES + LABELS
+    ===================================== */
 
-    network.appendChild(
-        trainMarker
+    let stationMarkup = "";
+
+    points.forEach(
+        (point, i) => {
+
+            const station = point.station;
+
+            const code =
+                station.to_code ||
+                station.code ||
+                station.station_code ||
+                "";
+
+            const name =
+                station.to_station ||
+                station.station ||
+                station.station_name ||
+                "Station";
+
+            const predictedEta =
+                station.predicted_eta ||
+                station.predicted ||
+                station.predicted_time ||
+                station.eta ||
+                "--";
+
+            const scheduledEta =
+                station.scheduled_eta ||
+                station.scheduled ||
+                station.scheduled_time ||
+                "--";
+
+            const delay =
+                Number(
+                    station.predicted_delay_min ??
+                    station.delay ??
+                    station.predicted_delay ??
+                    station.delay_min ??
+                    0
+                );
+
+            const rawStatus =
+                (station.status || "").toUpperCase();
+
+            let statusClass = "good";
+
+            if (rawStatus === "SLIGHT DELAY") {
+                statusClass = "mid";
+            }
+
+            if (rawStatus === "DELAYED") {
+                statusClass = "bad";
+            }
+
+            const isCurrent =
+                Boolean(code) &&
+                code === currentCode;
+
+            const side =
+                point.x === leftX
+                    ? "left"
+                    : "right";
+
+            const labelAnchor =
+                side === "left"
+                    ? "end"
+                    : "start";
+
+            const labelX =
+                side === "left"
+                    ? point.x - 24
+                    : point.x + 24;
+
+            const delayText =
+                delay > 0
+                    ? `+${Math.round(delay)} min`
+                    : "On time";
+
+            stationMarkup += `
+                <g
+                    class="network-station${isCurrent ? " current-network-station" : ""}"
+                    data-code="${code}"
+                >
+
+                    <circle
+                        class="station-dot-glow status-${statusClass}"
+                        cx="${point.x}"
+                        cy="${point.y}"
+                        r="${isCurrent ? 16 : 11}"
+                    ></circle>
+
+                    <circle
+                        class="station-dot status-${statusClass}${isCurrent ? " current" : ""}"
+                        cx="${point.x}"
+                        cy="${point.y}"
+                        r="${isCurrent ? 8 : 5.5}"
+                    ></circle>
+
+                    <text
+                        class="station-label-name"
+                        x="${labelX}"
+                        y="${point.y - 8}"
+                        text-anchor="${labelAnchor}"
+                    >${name}</text>
+
+                    <text
+                        class="station-label-code"
+                        x="${labelX}"
+                        y="${point.y + 9}"
+                        text-anchor="${labelAnchor}"
+                    >${code}${code ? " • " : ""}Sch ${scheduledEta}</text>
+
+                    <text
+                        class="station-label-eta status-${statusClass}"
+                        x="${labelX}"
+                        y="${point.y + 26}"
+                        text-anchor="${labelAnchor}"
+                    >${predictedEta} · ${delayText}</text>
+
+                </g>
+            `;
+
+        }
     );
+
+    /* =====================================
+       BUILD THE SVG
+    ===================================== */
+
+    const firstPoint = points[0];
+
+    const svgMarkup = `
+        <svg
+            viewBox="0 0 ${width} ${height}"
+            width="100%"
+            height="${height}"
+            preserveAspectRatio="xMidYMin meet"
+        >
+
+            <defs>
+                <linearGradient id="trackGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#38bdf8"></stop>
+                    <stop offset="50%" stop-color="#3b82f6"></stop>
+                    <stop offset="100%" stop-color="#8b5cf6"></stop>
+                </linearGradient>
+            </defs>
+
+            <path class="rail-track-glow" d="${pathData}"></path>
+            <path class="rail-track-path" d="${pathData}"></path>
+
+            ${stationMarkup}
+
+            <g
+                id="live-network-train"
+                class="live-network-train"
+                transform="translate(${firstPoint.x}, ${firstPoint.y})"
+            >
+
+                <circle class="live-train-ring" r="9"></circle>
+                <circle class="live-train-core" r="11"></circle>
+
+                <text
+                    class="live-train-icon"
+                    text-anchor="middle"
+                    dy="4"
+                >🚆</text>
+
+            </g>
+
+        </svg>
+    `;
+
+    network.innerHTML = svgMarkup;
+
+    /* =====================================
+       CACHE PATH + POINTS FOR LIVE
+       POSITION UPDATES
+    ===================================== */
+
+    network._trackPath =
+        network.querySelector(
+            ".rail-track-path"
+        );
+
+    network._points =
+        points;
 
 }
 
@@ -3464,214 +3569,150 @@ function updateLiveTrainPositionFromAPI(
     train
 ) {
 
-
     if (!train) {
 
         return;
 
     }
 
-
-    const currentCode =
-
-        train.current_code ||
-
-        train.currentCode ||
-
-        "";
-
-
-    const nextCode =
-
-        train.next_code ||
-
-        train.nextCode ||
-
-        "";
-
-
-    let sectionProgress =
-
-        Number(
-
-            train.section_progress ??
-
-            train.sectionProgress ??
-
-            0
-
-        );
-
-
-    /* =====================================
-       FIND NEXT CODE IF API DOESN'T RETURN IT
-    ===================================== */
-
-    let nextStationCode =
-        nextCode;
-
-
-    if (!nextStationCode) {
-
-
-        const currentIndex =
-
-            stations.findIndex(
-                station =>
-
-                    (
-
-                        station.code ||
-
-                        station.station_code
-
-                    ) === currentCode
-            );
-
-
-        if (
-
-            currentIndex >= 0 &&
-
-            currentIndex < stations.length - 1
-
-        ) {
-
-
-            nextStationCode =
-
-                stations[
-                    currentIndex + 1
-                ].code ||
-
-                stations[
-                    currentIndex + 1
-                ].station_code;
-
-        }
-
-    }
-
-
-    /* =====================================
-       FALLBACK
-    ===================================== */
-
-    if (
-
-        sectionProgress < 0 ||
-
-        sectionProgress > 1
-
-    ) {
-
-        sectionProgress =
-            0;
-
-    }
-
-
     const network =
         document.getElementById(
             "rail-network"
         );
+
+    if (!network) {
+
+        return;
+
+    }
+
+    const path =
+        network._trackPath ||
+        network.querySelector(
+            ".rail-track-path"
+        );
+
+    const points =
+        network._points;
 
     const trainMarker =
         document.getElementById(
             "live-network-train"
         );
 
-    if (!network || !trainMarker) {
+    if (
+        !path ||
+        !points ||
+        points.length === 0 ||
+        !trainMarker
+    ) {
 
         return;
 
     }
 
-    const stationElements =
-        network.querySelectorAll(
-            ".network-station"
+    const currentCode =
+        train.current_code ||
+        train.currentCode ||
+        "";
+
+    let sectionProgress =
+        Number(
+            train.section_progress ??
+            train.sectionProgress ??
+            0
         );
 
-    let currentElement = null;
+    if (
+        sectionProgress < 0 ||
+        sectionProgress > 1
+    ) {
 
-    let nextElement = null;
+        sectionProgress = 0;
 
-    stationElements.forEach(
-        stationEl => {
+    }
 
-            if (
-                stationEl.dataset.code === currentCode
-            ) {
+    /* =====================================
+       FIND CURRENT / NEXT STATION INDEX
+    ===================================== */
 
-                currentElement = stationEl;
+    let currentIndex =
+        points.findIndex(
+            point => {
+
+                const station = point.station;
+
+                const code =
+                    station.to_code ||
+                    station.code ||
+                    station.station_code ||
+                    "";
+
+                return code === currentCode;
 
             }
+        );
 
-            if (
-                stationEl.dataset.code === nextStationCode
-            ) {
+    if (currentIndex < 0) {
 
-                nextElement = stationEl;
+        currentIndex = 0;
 
-            }
+    }
 
-        }
+    let nextIndex =
+        currentIndex + 1;
+
+    if (nextIndex >= points.length) {
+
+        nextIndex = currentIndex;
+
+    }
+
+    /* =====================================
+       MOVE THE TRAIN MARKER ALONG THE
+       ACTUAL CURVED PATH (not a straight
+       line) USING THE SVG PATH GEOMETRY
+    ===================================== */
+
+    const totalLength =
+        path.getTotalLength();
+
+    const segmentCount =
+        points.length - 1 || 1;
+
+    const segmentStart =
+        (currentIndex / segmentCount) * totalLength;
+
+    const segmentEnd =
+        (nextIndex / segmentCount) * totalLength;
+
+    const targetLength =
+        Math.max(
+            0,
+            Math.min(
+                totalLength,
+                segmentStart +
+                (segmentEnd - segmentStart) * sectionProgress
+            )
+        );
+
+    const trainPoint =
+        path.getPointAtLength(
+            targetLength
+        );
+
+    trainMarker.setAttribute(
+        "transform",
+        `translate(${trainPoint.x}, ${trainPoint.y})`
     );
 
-    if (!currentElement) {
-
-        console.log(
-            "Current station not found:",
-            currentCode
-        );
-
-        return;
-
-    }
-
-    const networkRect =
-        network.getBoundingClientRect();
-
-    const currentRect =
-        currentElement.getBoundingClientRect();
-
-    const startPosition =
-        currentRect.top -
-        networkRect.top +
-        (currentRect.height / 2);
-
-    let endPosition =
-        startPosition;
-
-    if (nextElement) {
-
-        const nextRect =
-            nextElement.getBoundingClientRect();
-
-        endPosition =
-            nextRect.top -
-            networkRect.top +
-            (nextRect.height / 2);
-
-    }
-
-    const trainPosition =
-        startPosition +
-        (endPosition - startPosition) * sectionProgress;
-
-    trainMarker.style.position =
-        "absolute";
-
-    trainMarker.style.top =
-        `${trainPosition}px`;
-
     console.log(
-        "Train moved to:",
-        currentCode,
+        "Train moved to progress:",
+        sectionProgress,
+        "| section:",
+        currentIndex,
         "->",
-        nextStationCode,
-        "| Progress:",
-        sectionProgress
+        nextIndex
     );
 
 }
