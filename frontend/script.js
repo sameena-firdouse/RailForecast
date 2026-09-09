@@ -19,7 +19,7 @@ const API_BASE =
     window.location.hostname === "localhost" ||
     window.location.hostname === "127.0.0.1"
         ? "http://127.0.0.1:5000"
-        : "";
+        : (window.RAILFORECAST_API || "");
 
 
 /* =========================================
@@ -54,9 +54,14 @@ async function loadLiveForecast(
     date
 ) {
 
+    const dateParam =
+        date
+            ? `?date=${encodeURIComponent(date)}`
+            : "";
+
     const url =
         apiUrl(
-            `/api/forecast?train=${encodeURIComponent(trainNumber)}&date=${encodeURIComponent(date)}`
+            `/api/forecast/${encodeURIComponent(trainNumber)}${dateParam}`
         );
 
     console.log(
@@ -777,6 +782,7 @@ async function forecast() {
 
 
         liveStationForecast =
+            data.predictions ||
             data.forecast ||
             data.station_forecast ||
             data.stations ||
@@ -784,9 +790,7 @@ async function forecast() {
 
 
         liveEvents =
-            data.events ||
-            data.active_events ||
-            [];
+            await loadActiveEvents();
 
 
         liveRouteSections =
@@ -1034,6 +1038,8 @@ function updateTrainStatus(
 
         cur.textContent =
 
+            train.current_name ||
+
             train.current_station ||
 
             train.currentStation ||
@@ -1049,6 +1055,8 @@ function updateTrainStatus(
         const currentDelay =
 
             Number(
+
+                train.delay ??
 
                 train.current_delay ??
 
@@ -1073,6 +1081,8 @@ function updateTrainStatus(
     if (next) {
 
         next.textContent =
+
+            train.next_name ||
 
             train.next_station ||
 
@@ -1317,6 +1327,8 @@ function renderImpacts(
 
                 Number(
 
+                    item.current_impact_min ??
+
                     item.impact ??
 
                     item.delay_impact ??
@@ -1440,6 +1452,8 @@ function renderImpacts(
             const impact =
 
                 Number(
+
+                    item.current_impact_min ??
 
                     item.impact ??
 
@@ -1593,6 +1607,8 @@ function renderForecastTimeline(
 
                 Number(
 
+                    station.predicted_delay_min ??
+
                     station.delay ??
 
                     station.predicted_delay ??
@@ -1647,8 +1663,9 @@ function renderForecastTimeline(
 
             if (
 
-                status ===
-                "Current"
+                status === "Current" ||
+                status === "Upcoming" ||
+                status === "SLIGHT DELAY"
 
             ) {
 
@@ -1660,13 +1677,12 @@ function renderForecastTimeline(
 
             if (
 
-                status ===
-                "Upcoming"
+                status === "DELAYED"
 
             ) {
 
                 statusClass =
-                    "status-mid";
+                    "status-bad";
 
             }
 
@@ -1711,6 +1727,8 @@ function renderForecastTimeline(
 
                         ${
 
+                            station.to_station ||
+
                             station.station ||
 
                             station.station_name ||
@@ -1725,6 +1743,8 @@ function renderForecastTimeline(
                     <div class="station-code">
 
                         ${
+
+                            station.to_code ||
 
                             station.code ||
 
@@ -1745,6 +1765,8 @@ function renderForecastTimeline(
 
                         ${
 
+                            station.predicted_eta ||
+
                             station.predicted ||
 
                             station.predicted_time ||
@@ -1763,6 +1785,8 @@ function renderForecastTimeline(
                         Scheduled:
 
                         ${
+
+                            station.scheduled_eta ||
 
                             station.scheduled ||
 
@@ -1878,6 +1902,8 @@ function renderRailwayNetwork(
 
             const code =
 
+                station.to_code ||
+
                 station.code ||
 
                 station.station_code ||
@@ -1890,6 +1916,8 @@ function renderRailwayNetwork(
 
 
             const name =
+
+                station.to_station ||
 
                 station.station ||
 
@@ -3058,6 +3086,8 @@ function runSimulation() {
 
     Number(
 
+        liveTrainData?.delay ??
+
         liveTrainData?.current_delay ??
 
         liveTrainData?.currentDelay ??
@@ -3541,299 +3571,107 @@ function updateLiveTrainPositionFromAPI(
     }
 
 
-    updateLiveTrainPosition(
-
-        currentCode,
-
-        nextStationCode,
-
-        sectionProgress
-
-    );
-
-
-
-
-    if (!network || !train) {
-
-        console.log(
-            "Rail network or train element not found."
+    const network =
+        document.getElementById(
+            "rail-network"
         );
+
+    const trainMarker =
+        document.getElementById(
+            "live-network-train"
+        );
+
+    if (!network || !trainMarker) {
 
         return;
 
     }
 
-
-    const stations =
+    const stationElements =
         network.querySelectorAll(
             ".network-station"
         );
 
+    let currentElement = null;
 
-    /* =====================================
-       NORMALIZE STATION NAMES
-    ===================================== */
+    let nextElement = null;
 
-    function normalizeStation(value) {
+    stationElements.forEach(
+        stationEl => {
 
-        return String(value || "")
+            if (
+                stationEl.dataset.code === currentCode
+            ) {
 
-            .toUpperCase()
+                currentElement = stationEl;
 
-            .replace(
-                /\bJUNCTION\b/g,
-                ""
-            )
+            }
 
-            .replace(
-                /\s+/g,
-                " "
-            )
+            if (
+                stationEl.dataset.code === nextStationCode
+            ) {
 
-            .trim();
+                nextElement = stationEl;
 
-    }
-
-
-    const normalizedCurrent =
-        normalizeStation(
-            currentStation
-        );
-
-
-    const normalizedNext =
-        normalizeStation(
-            nextStation
-        );
-
-
-    let currentElement =
-        null;
-
-
-    let nextElement =
-        null;
-
-
-    /* =====================================
-       FIND CURRENT AND NEXT STATIONS
-    ===================================== */
-
-    stations.forEach(station => {
-
-
-        const stationCode =
-            normalizeStation(
-                station.dataset.code
-            );
-
-
-        const stationName =
-            normalizeStation(
-                station.innerText
-            );
-
-
-        /* CURRENT STATION */
-
-        if (
-
-            stationCode ===
-            normalizedCurrent ||
-
-            stationName ===
-            normalizedCurrent ||
-
-            stationName.includes(
-                normalizedCurrent
-            ) ||
-
-            normalizedCurrent.includes(
-                stationName
-            )
-
-        ) {
-
-            currentElement =
-                station;
+            }
 
         }
-
-
-        /* NEXT STATION */
-
-        if (
-
-            stationCode ===
-            normalizedNext ||
-
-            stationName ===
-            normalizedNext ||
-
-            stationName.includes(
-                normalizedNext
-            ) ||
-
-            normalizedNext.includes(
-                stationName
-            )
-
-        ) {
-
-            nextElement =
-                station;
-
-        }
-
-
-    });
-
-
-    /* =====================================
-       CURRENT STATION NOT FOUND
-    ===================================== */
+    );
 
     if (!currentElement) {
 
         console.log(
             "Current station not found:",
-            currentStation
+            currentCode
         );
 
         return;
 
     }
 
-
-    /* =====================================
-       GET NETWORK POSITION
-    ===================================== */
-
     const networkRect =
         network.getBoundingClientRect();
-
 
     const currentRect =
         currentElement.getBoundingClientRect();
 
-
     const startPosition =
-
-        currentRect.top
-
-        -
-
-        networkRect.top
-
-        +
-
-        (
-            currentRect.height / 2
-        );
-
+        currentRect.top -
+        networkRect.top +
+        (currentRect.height / 2);
 
     let endPosition =
         startPosition;
 
-
-    /* =====================================
-       NEXT STATION POSITION
-    ===================================== */
-
     if (nextElement) {
-
 
         const nextRect =
             nextElement.getBoundingClientRect();
 
-
         endPosition =
-
-            nextRect.top
-
-            -
-
-            networkRect.top
-
-            +
-
-            (
-                nextRect.height / 2
-            );
-
+            nextRect.top -
+            networkRect.top +
+            (nextRect.height / 2);
 
     }
 
-
-    /* =====================================
-       KEEP PROGRESS BETWEEN 0 AND 1
-    ===================================== */
-
-    sectionProgress =
-
-        Math.max(
-
-            0,
-
-            Math.min(
-
-                1,
-
-                sectionProgress
-
-            )
-
-        );
-
-
-    /* =====================================
-       CALCULATE LIVE TRAIN POSITION
-    ===================================== */
-
     const trainPosition =
+        startPosition +
+        (endPosition - startPosition) * sectionProgress;
 
-        startPosition
+    trainMarker.style.position =
+        "absolute";
 
-        +
-
-        (
-
-            endPosition
-
-            -
-
-            startPosition
-
-        )
-
-        *
-
-        sectionProgress;
-
-
-    /* =====================================
-       MOVE TRAIN
-    ===================================== */
-
-    train.style.top =
+    trainMarker.style.top =
         `${trainPosition}px`;
 
-
     console.log(
-
         "Train moved to:",
-
-        currentStation,
-
-        "→",
-
-        nextStation,
-
+        currentCode,
+        "->",
+        nextStationCode,
         "| Progress:",
-
         sectionProgress
-
     );
 
 }
@@ -3960,9 +3798,6 @@ document.addEventListener(
     }
 
 );
-function apiUrl(path) {
-    return `${API_BASE}${path}`;
-}
 async function loadActiveEvents() {
 
     try {
@@ -4034,27 +3869,6 @@ async function submitSimulationEvent(eventData) {
 
         throw error;
     }
-}
-async function clearActiveEvents() {
-
-    const response = await fetch(
-        apiUrl("/api/events"),
-        {
-            method: "DELETE"
-        }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok || !data.success) {
-
-        throw new Error(
-            data.error ||
-            "Failed to clear events"
-        );
-    }
-
-    return data;
 }
 async function clearActiveEvents() {
 
