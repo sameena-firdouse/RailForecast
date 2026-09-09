@@ -1,6 +1,6 @@
 /* =========================================
    RAILFORECAST
-   COMPLETE JAVASCRIPT - NEW VERSION
+   COMPLETE JAVASCRIPT - MODIFIED VERSION
 ========================================= */
 
 
@@ -284,6 +284,7 @@ const simulationFeatures = {
                 id: "signal-status",
                 label: "Signal Condition",
                 type: "select",
+
                 options: [
 
                     "Red Signal Hold",
@@ -341,6 +342,7 @@ const simulationFeatures = {
                 id: "traffic-level",
                 label: "Traffic Density",
                 type: "select",
+
                 options: [
 
                     "Moderate",
@@ -497,6 +499,7 @@ const simulationFeatures = {
                 id: "maintenance-type",
                 label: "Maintenance Type",
                 type: "select",
+
                 options: [
 
                     "Track Repair",
@@ -556,6 +559,7 @@ const simulationFeatures = {
                 id: "crossing-status",
                 label: "Gate Condition",
                 type: "select",
+
                 options: [
 
                     "Normal Operation",
@@ -606,6 +610,7 @@ const simulationFeatures = {
                 id: "junction",
                 label: "Affected Junction",
                 type: "select",
+
                 options: [
 
                     "Vijayawada Junction",
@@ -649,7 +654,6 @@ function hideAllScreens() {
     const screens =
         document.querySelectorAll(".screen");
 
-
     screens.forEach(screen => {
 
         screen.classList.add("hide");
@@ -663,10 +667,8 @@ function showScreen(id) {
 
     hideAllScreens();
 
-
     const screen =
         document.getElementById(id);
-
 
     if (!screen) {
 
@@ -679,9 +681,7 @@ function showScreen(id) {
 
     }
 
-
     screen.classList.remove("hide");
-
 
     window.scrollTo({
 
@@ -742,14 +742,11 @@ function forecast() {
     const trainInput =
         document.getElementById("train");
 
-
     const error =
         document.getElementById("err");
 
-
     const loading =
         document.getElementById("loading");
-
 
     const result =
         document.getElementById("result");
@@ -766,34 +763,60 @@ function forecast() {
         trainInput.value.trim();
 
 
-    error.classList.add("hide");
+    if (error) {
 
-    error.textContent = "";
+        error.classList.add("hide");
+
+        error.textContent = "";
+
+    }
 
 
     if (trainNumber === "") {
 
-        error.textContent =
-            "Please enter a train number.";
+        if (error) {
 
-        error.classList.remove("hide");
+            error.textContent =
+                "Please enter a train number.";
+
+            error.classList.remove("hide");
+
+        }
 
         return;
 
     }
 
 
-    result.classList.add("hide");
+    if (result) {
 
-    loading.classList.remove("hide");
+        result.classList.add("hide");
+
+    }
+
+
+    if (loading) {
+
+        loading.classList.remove("hide");
+
+    }
 
 
     setTimeout(() => {
 
 
-        loading.classList.add("hide");
+        if (loading) {
 
-        result.classList.remove("hide");
+            loading.classList.add("hide");
+
+        }
+
+
+        if (result) {
+
+            result.classList.remove("hide");
+
+        }
 
 
         updateTrainStatus();
@@ -806,16 +829,33 @@ function forecast() {
 
         renderAccuracyChart();
 
-        updateSelectedTrain();
+
+        /* =====================================
+           UPDATE LIVE TRAIN POSITION
+        ===================================== */
+
+        updateLiveTrainPosition(
+
+            trainData.currentCode,
+
+            trainData.nextStation,
+
+            0.5
+
+        );
 
 
-        result.scrollIntoView({
+        if (result) {
 
-            behavior: "smooth",
+            result.scrollIntoView({
 
-            block: "start"
+                behavior: "smooth",
 
-        });
+                block: "start"
+
+            });
+
+        }
 
 
     }, 1000);
@@ -908,60 +948,81 @@ function updateJourney() {
         trainData.progress;
 
 
-    document.getElementById(
-        "journey-percent"
-    ).textContent =
-        `${progress}%`;
-
-
-    document.getElementById(
-        "journey-from"
-    ).textContent =
-        trainData.from;
-
-
-    document.getElementById(
-        "journey-to"
-    ).textContent =
-        trainData.to;
-
-
-    document.getElementById(
-        "journey-progress"
-    ).style.width =
-        `${progress}%`;
-
-
-    document.getElementById(
-        "progress-marker"
-    ).style.left =
-        `${progress}%`;
-
-
-    document.getElementById(
-        "journey-status"
-    ).textContent =
-        `Your train is currently near ${trainData.currentStation}. ${progress}% of the journey has been completed.`;
-
-}
-
-
-/* =========================================
-   SELECTED TRAIN NETWORK
-========================================= */
-
-function updateSelectedTrain() {
-
-    const selectedTrain =
+    const journeyPercent =
         document.getElementById(
-            "selected-network-train"
+            "journey-percent"
+        );
+
+    const journeyFrom =
+        document.getElementById(
+            "journey-from"
+        );
+
+    const journeyTo =
+        document.getElementById(
+            "journey-to"
+        );
+
+    const journeyProgress =
+        document.getElementById(
+            "journey-progress"
+        );
+
+    const progressMarker =
+        document.getElementById(
+            "progress-marker"
+        );
+
+    const journeyStatus =
+        document.getElementById(
+            "journey-status"
         );
 
 
-    if (selectedTrain) {
+    if (journeyPercent) {
 
-        selectedTrain.style.display =
-            "block";
+        journeyPercent.textContent =
+            `${progress}%`;
+
+    }
+
+
+    if (journeyFrom) {
+
+        journeyFrom.textContent =
+            trainData.from;
+
+    }
+
+
+    if (journeyTo) {
+
+        journeyTo.textContent =
+            trainData.to;
+
+    }
+
+
+    if (journeyProgress) {
+
+        journeyProgress.style.width =
+            `${progress}%`;
+
+    }
+
+
+    if (progressMarker) {
+
+        progressMarker.style.left =
+            `${progress}%`;
+
+    }
+
+
+    if (journeyStatus) {
+
+        journeyStatus.textContent =
+            `Your train is currently near ${trainData.currentStation}. ${progress}% of the journey has been completed.`;
 
     }
 
@@ -979,18 +1040,15 @@ function renderImpacts() {
             "impact-section"
         );
 
-
     const totalImpact =
         document.getElementById(
             "total-impact"
         );
 
-
     const summary =
         document.getElementById(
             "impact-summary"
         );
-
 
     const events =
         document.getElementById(
@@ -999,10 +1057,15 @@ function renderImpacts() {
 
 
     if (
+
         !impactSection ||
+
         !totalImpact ||
+
         !summary ||
+
         !events
+
     ) {
 
         return;
@@ -1013,6 +1076,7 @@ function renderImpacts() {
     const impactData = [
 
         {
+
             feature:
                 "Route Congestion",
 
@@ -1021,10 +1085,12 @@ function renderImpacts() {
 
             impact:
                 7
+
         },
 
 
         {
+
             feature:
                 "Historical Delay Pattern",
 
@@ -1033,6 +1099,7 @@ function renderImpacts() {
 
             impact:
                 5
+
         }
 
     ];
@@ -1167,8 +1234,11 @@ function renderForecastTimeline() {
 
 
         if (
+
             station.delay >= 10 &&
+
             station.delay < 20
+
         ) {
 
             delayClass =
@@ -1178,7 +1248,9 @@ function renderForecastTimeline() {
 
 
         if (
+
             station.delay >= 20
+
         ) {
 
             delayClass =
@@ -1192,8 +1264,10 @@ function renderForecastTimeline() {
 
 
         if (
+
             station.status ===
             "Current"
+
         ) {
 
             statusClass =
@@ -1203,8 +1277,10 @@ function renderForecastTimeline() {
 
 
         if (
+
             station.status ===
             "Upcoming"
+
         ) {
 
             statusClass =
@@ -1224,8 +1300,10 @@ function renderForecastTimeline() {
 
 
         if (
+
             station.status ===
             "Current"
+
         ) {
 
             row.classList.add(
@@ -1335,8 +1413,10 @@ function renderAccuracyChart() {
 
 
     if (
+
         typeof Chart ===
         "undefined"
+
     ) {
 
         console.warn(
@@ -1356,6 +1436,7 @@ function renderAccuracyChart() {
 
 
     accuracyChart =
+
         new Chart(
 
             canvas,
@@ -1383,6 +1464,7 @@ function renderAccuracyChart() {
 
                             label:
                                 "Mean Absolute Error",
+
 
                             data: [
 
@@ -1529,6 +1611,17 @@ function openSimulation(type) {
         );
 
 
+    if (!config || !title) {
+
+        console.error(
+            "Simulation configuration elements not found."
+        );
+
+        return;
+
+    }
+
+
     const formContainer =
         config.querySelector(
             ".simulation-form-grid"
@@ -1541,38 +1634,32 @@ function openSimulation(type) {
         );
 
 
-    /*
-    UPDATE TITLE
-    */
+    if (!formContainer) {
+
+        return;
+
+    }
+
 
     title.textContent =
         feature.title;
 
 
-    /*
-    CLEAR OLD FEATURE INPUTS
-    */
-
     formContainer.innerHTML =
         "";
 
 
-    /*
-    CLEAR OLD RESULT
-    */
+    if (result) {
 
-    result.classList.add(
-        "hide"
-    );
+        result.classList.add(
+            "hide"
+        );
 
+        result.innerHTML =
+            "";
 
-    result.innerHTML =
-        "";
+    }
 
-
-    /*
-    CREATE INPUTS FOR SELECTED FEATURE
-    */
 
     feature.fields.forEach(
         field => {
@@ -1606,13 +1693,11 @@ function openSimulation(type) {
             let input;
 
 
-            /*
-            SELECT FIELD
-            */
-
             if (
+
                 field.type ===
                 "select"
+
             ) {
 
 
@@ -1644,16 +1729,11 @@ function openSimulation(type) {
                             option
                         );
 
-
                     }
                 );
 
             }
 
-
-            /*
-            INPUT FIELD
-            */
 
             else {
 
@@ -1669,8 +1749,10 @@ function openSimulation(type) {
 
 
                 if (
+
                     field.value !==
                     undefined
+
                 ) {
 
                     input.value =
@@ -1699,18 +1781,10 @@ function openSimulation(type) {
     );
 
 
-    /*
-    SHOW CONFIGURATION
-    */
-
     config.classList.remove(
         "hide"
     );
 
-
-    /*
-    SCROLL TO CONFIGURATION
-    */
 
     setTimeout(() => {
 
@@ -1753,7 +1827,9 @@ function getNumber(id) {
 
 
     return isNaN(value)
+
         ? 0
+
         : value;
 
 }
@@ -1811,6 +1887,13 @@ function runSimulation() {
         );
 
 
+    if (!result) {
+
+        return;
+
+    }
+
+
     let impact = 0;
 
     let explanation = "";
@@ -1823,8 +1906,10 @@ function runSimulation() {
     ===================================== */
 
     if (
+
         currentSimulation ===
         "signal"
+
     ) {
 
 
@@ -1850,8 +1935,10 @@ function runSimulation() {
 
 
         if (
+
             condition ===
             "Signal Failure"
+
         ) {
 
             multiplier = 1.3;
@@ -1860,8 +1947,10 @@ function runSimulation() {
 
 
         else if (
+
             condition ===
             "Signal Communication Failure"
+
         ) {
 
             multiplier = 1.2;
@@ -1870,8 +1959,10 @@ function runSimulation() {
 
 
         else if (
+
             condition ===
             "Temporary Signal Hold"
+
         ) {
 
             multiplier = 0.8;
@@ -1896,8 +1987,10 @@ function runSimulation() {
     ===================================== */
 
     else if (
+
         currentSimulation ===
         "congestion"
+
     ) {
 
 
@@ -1923,8 +2016,10 @@ function runSimulation() {
 
 
         if (
+
             traffic ===
             "High"
+
         ) {
 
             baseImpact = 15;
@@ -1933,8 +2028,10 @@ function runSimulation() {
 
 
         if (
+
             traffic ===
             "Severe"
+
         ) {
 
             baseImpact = 25;
@@ -1946,6 +2043,7 @@ function runSimulation() {
             Math.round(
 
                 baseImpact +
+
                 trains * 3
 
             );
@@ -1962,8 +2060,10 @@ function runSimulation() {
     ===================================== */
 
     else if (
+
         currentSimulation ===
         "preceding"
+
     ) {
 
 
@@ -1985,10 +2085,6 @@ function runSimulation() {
             );
 
 
-        /*
-        DELAY PROPAGATION FACTOR
-        */
-
         impact =
             Math.round(
                 precedingDelay * 0.65
@@ -2006,8 +2102,10 @@ function runSimulation() {
     ===================================== */
 
     else if (
+
         currentSimulation ===
         "speed"
+
     ) {
 
 
@@ -2036,9 +2134,13 @@ function runSimulation() {
 
 
         if (
+
             normalSpeed <= 0 ||
+
             restrictedSpeed <= 0 ||
+
             distance <= 0
+
         ) {
 
             alert(
@@ -2051,18 +2153,24 @@ function runSimulation() {
 
 
         const normalTime =
+
             (
                 distance /
+
                 normalSpeed
             )
+
             * 60;
 
 
         const restrictedTime =
+
             (
                 distance /
+
                 restrictedSpeed
             )
+
             * 60;
 
 
@@ -2070,6 +2178,7 @@ function runSimulation() {
             Math.round(
 
                 restrictedTime -
+
                 normalTime
 
             );
@@ -2086,8 +2195,10 @@ function runSimulation() {
     ===================================== */
 
     else if (
+
         currentSimulation ===
         "maintenance"
+
     ) {
 
 
@@ -2114,8 +2225,10 @@ function runSimulation() {
 
 
         if (
+
             maintenanceType ===
             "Emergency Repair"
+
         ) {
 
             multiplier =
@@ -2125,8 +2238,10 @@ function runSimulation() {
 
 
         else if (
+
             maintenanceType ===
             "Maintenance Block"
+
         ) {
 
             multiplier =
@@ -2136,8 +2251,10 @@ function runSimulation() {
 
 
         else if (
+
             maintenanceType ===
             "Track Inspection"
+
         ) {
 
             multiplier =
@@ -2164,8 +2281,10 @@ function runSimulation() {
     ===================================== */
 
     else if (
+
         currentSimulation ===
         "crossing"
+
     ) {
 
 
@@ -2192,8 +2311,10 @@ function runSimulation() {
 
 
         if (
+
             status ===
             "Gate Opening Delay"
+
         ) {
 
             multiplier =
@@ -2203,8 +2324,10 @@ function runSimulation() {
 
 
         else if (
+
             status ===
             "Gate Malfunction"
+
         ) {
 
             multiplier =
@@ -2214,8 +2337,10 @@ function runSimulation() {
 
 
         else if (
+
             status ===
             "Road Traffic Congestion"
+
         ) {
 
             multiplier =
@@ -2242,8 +2367,10 @@ function runSimulation() {
     ===================================== */
 
     else if (
+
         currentSimulation ===
         "bottleneck"
+
     ) {
 
 
@@ -2265,13 +2392,12 @@ function runSimulation() {
             );
 
 
-        /*
-        VALIDATE CAPACITY
-        */
-
         if (
+
             capacity < 0 ||
+
             capacity > 100
+
         ) {
 
             alert(
@@ -2284,15 +2410,20 @@ function runSimulation() {
 
 
         const capacityImpact =
+
             (
                 100 -
+
                 capacity
             )
+
             * 0.5;
 
 
         const trainImpact =
+
             trains *
+
             4;
 
 
@@ -2300,6 +2431,7 @@ function runSimulation() {
             Math.round(
 
                 capacityImpact +
+
                 trainImpact
 
             );
@@ -2311,10 +2443,6 @@ function runSimulation() {
     }
 
 
-    /*
-    PREVENT NEGATIVE IMPACT
-    */
-
     impact =
         Math.max(
             0,
@@ -2322,18 +2450,10 @@ function runSimulation() {
         );
 
 
-    /*
-    UPDATED DELAY
-    */
-
     const updatedDelay =
         trainData.currentDelay +
         impact;
 
-
-    /*
-    SHOW RESULT
-    */
 
     result.classList.remove(
         "hide"
@@ -2358,7 +2478,6 @@ function runSimulation() {
             </h2>
 
         </div>
-
 
 
         <div class="simulation-impact-result">
@@ -2392,7 +2511,6 @@ function runSimulation() {
         </div>
 
 
-
         <div class="simulation-analysis">
 
 
@@ -2414,7 +2532,6 @@ function runSimulation() {
             </div>
 
 
-
             <div>
 
                 <small>
@@ -2433,7 +2550,6 @@ function runSimulation() {
             </div>
 
 
-
             <div>
 
                 <small>
@@ -2450,7 +2566,6 @@ function runSimulation() {
                 </b>
 
             </div>
-
 
 
             <div>
@@ -2474,7 +2589,6 @@ function runSimulation() {
         </div>
 
 
-
         <div class="simulation-ai-note">
 
             <span>
@@ -2489,6 +2603,7 @@ function runSimulation() {
                 This simulation creates an additional disruption impact that can be passed into the RailForecast Dynamic ETA Engine together with historical ML prediction, live train data, real-time corrections and railway-authorized API intelligence.
 
             </p>
+
 
         </div>
 
@@ -2585,9 +2700,13 @@ function connectAPI(type) {
 
 
     if (
+
         !endpoint ||
+
         !apiKey ||
+
         !status
+
     ) {
 
         console.error(
@@ -2600,13 +2719,11 @@ function connectAPI(type) {
     }
 
 
-    /*
-    VALIDATE ENDPOINT
-    */
-
     if (
+
         endpoint.value.trim() ===
         ""
+
     ) {
 
         alert(
@@ -2618,13 +2735,11 @@ function connectAPI(type) {
     }
 
 
-    /*
-    VALIDATE API KEY
-    */
-
     if (
+
         apiKey.value.trim() ===
         ""
+
     ) {
 
         alert(
@@ -2636,10 +2751,6 @@ function connectAPI(type) {
     }
 
 
-    /*
-    SHOW CONNECTING
-    */
-
     status.textContent =
         "Connecting...";
 
@@ -2647,10 +2758,6 @@ function connectAPI(type) {
     status.style.color =
         "#f2b84b";
 
-
-    /*
-    PROTOTYPE CONNECTION
-    */
 
     setTimeout(() => {
 
@@ -2696,6 +2803,318 @@ function capitalize(text) {
 
 
 /* =========================================
+   LIVE TRAIN POSITION ON VERTICAL ROUTE
+========================================= */
+
+function updateLiveTrainPosition(
+
+    currentStation,
+
+    nextStation,
+
+    sectionProgress = 0.5
+
+) {
+
+
+    const network =
+        document.getElementById(
+            "rail-network"
+        );
+
+
+    const train =
+        document.getElementById(
+            "live-network-train"
+        );
+
+
+    if (!network || !train) {
+
+        console.log(
+            "Rail network or train element not found."
+        );
+
+        return;
+
+    }
+
+
+    const stations =
+        network.querySelectorAll(
+            ".network-station"
+        );
+
+
+    /* =====================================
+       NORMALIZE STATION NAMES
+    ===================================== */
+
+    function normalizeStation(value) {
+
+        return String(value || "")
+
+            .toUpperCase()
+
+            .replace(
+                /\bJUNCTION\b/g,
+                ""
+            )
+
+            .replace(
+                /\s+/g,
+                " "
+            )
+
+            .trim();
+
+    }
+
+
+    const normalizedCurrent =
+        normalizeStation(
+            currentStation
+        );
+
+
+    const normalizedNext =
+        normalizeStation(
+            nextStation
+        );
+
+
+    let currentElement =
+        null;
+
+
+    let nextElement =
+        null;
+
+
+    /* =====================================
+       FIND CURRENT AND NEXT STATIONS
+    ===================================== */
+
+    stations.forEach(station => {
+
+
+        const stationCode =
+            normalizeStation(
+                station.dataset.code
+            );
+
+
+        const stationName =
+            normalizeStation(
+                station.innerText
+            );
+
+
+        /* CURRENT STATION */
+
+        if (
+
+            stationCode ===
+            normalizedCurrent ||
+
+            stationName ===
+            normalizedCurrent ||
+
+            stationName.includes(
+                normalizedCurrent
+            ) ||
+
+            normalizedCurrent.includes(
+                stationName
+            )
+
+        ) {
+
+            currentElement =
+                station;
+
+        }
+
+
+        /* NEXT STATION */
+
+        if (
+
+            stationCode ===
+            normalizedNext ||
+
+            stationName ===
+            normalizedNext ||
+
+            stationName.includes(
+                normalizedNext
+            ) ||
+
+            normalizedNext.includes(
+                stationName
+            )
+
+        ) {
+
+            nextElement =
+                station;
+
+        }
+
+
+    });
+
+
+    /* =====================================
+       CURRENT STATION NOT FOUND
+    ===================================== */
+
+    if (!currentElement) {
+
+        console.log(
+            "Current station not found:",
+            currentStation
+        );
+
+        return;
+
+    }
+
+
+    /* =====================================
+       GET NETWORK POSITION
+    ===================================== */
+
+    const networkRect =
+        network.getBoundingClientRect();
+
+
+    const currentRect =
+        currentElement.getBoundingClientRect();
+
+
+    const startPosition =
+
+        currentRect.top
+
+        -
+
+        networkRect.top
+
+        +
+
+        (
+            currentRect.height / 2
+        );
+
+
+    let endPosition =
+        startPosition;
+
+
+    /* =====================================
+       NEXT STATION POSITION
+    ===================================== */
+
+    if (nextElement) {
+
+
+        const nextRect =
+            nextElement.getBoundingClientRect();
+
+
+        endPosition =
+
+            nextRect.top
+
+            -
+
+            networkRect.top
+
+            +
+
+            (
+                nextRect.height / 2
+            );
+
+
+    }
+
+
+    /* =====================================
+       KEEP PROGRESS BETWEEN 0 AND 1
+    ===================================== */
+
+    sectionProgress =
+
+        Math.max(
+
+            0,
+
+            Math.min(
+
+                1,
+
+                sectionProgress
+
+            )
+
+        );
+
+
+    /* =====================================
+       CALCULATE LIVE TRAIN POSITION
+    ===================================== */
+
+    const trainPosition =
+
+        startPosition
+
+        +
+
+        (
+
+            endPosition
+
+            -
+
+            startPosition
+
+        )
+
+        *
+
+        sectionProgress;
+
+
+    /* =====================================
+       MOVE TRAIN
+    ===================================== */
+
+    train.style.top =
+        `${trainPosition}px`;
+
+
+    console.log(
+
+        "Train moved to:",
+
+        currentStation,
+
+        "→",
+
+        nextStation,
+
+        "| Progress:",
+
+        sectionProgress
+
+    );
+
+}
+
+
+/* =========================================
    INITIALIZATION
 ========================================= */
 
@@ -2706,9 +3125,9 @@ document.addEventListener(
     () => {
 
 
-        /*
-        DEFAULT DATE
-        */
+        /* =====================================
+           DEFAULT DATE
+        ===================================== */
 
         const dateInput =
             document.getElementById(
@@ -2755,9 +3174,9 @@ document.addEventListener(
         }
 
 
-        /*
-        ENTER KEY SEARCH
-        */
+        /* =====================================
+           ENTER KEY SEARCH
+        ===================================== */
 
         const trainInput =
             document.getElementById(
@@ -2776,8 +3195,10 @@ document.addEventListener(
 
 
                     if (
+
                         event.key ===
                         "Enter"
+
                     ) {
 
                         forecast();
@@ -2792,9 +3213,9 @@ document.addEventListener(
         }
 
 
-        /*
-        ENSURE HOME PAGE IS VISIBLE
-        */
+        /* =====================================
+           ENSURE HOME PAGE IS VISIBLE
+        ===================================== */
 
         const homeScreen =
             document.getElementById(
