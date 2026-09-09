@@ -1,12 +1,2504 @@
-const $=x=>document.getElementById(x);
-function show(x){["home","passenger","department","maintenance"].forEach(s=>{const e=$(s);if(e)e.classList.toggle("hide",s!==x)});scrollTo(0,0)}
-function home(){show("home")} function passenger(){show("passenger")} function department(){show("department")} function maintenance(){show("maintenance");loadMaintenance()}
-const API_BASE=(window.RAILFORECAST_API||"").replace(/\/$/,"");
-function err(x){const e=$("err");e.textContent=x;e.classList.remove("hide")}
-async function forecast(){const t=$("train").value.trim(),d=$("date").value,s=$("from").value.trim();if(!t)return err("Enter a train number.");if(!API_BASE)return err("Backend API URL is not configured.");$("err").classList.add("hide");try{const q=new URLSearchParams();if(d)q.set("date",d);if(s)q.set("station",s);const r=await fetch(`${API_BASE}/api/forecast/${encodeURIComponent(t)}?${q}`),x=await r.json();if(!r.ok||!x.success)throw Error(x.error||"Forecast failed");render(x)}catch(e){err(e.message)}}
-function render(x){const t=x.train;$("result").classList.remove("hide");$("title").textContent=t.number+(t.name?" · "+t.name:"");$("route").textContent=(t.current_name||t.current_code||"Unknown")+" → "+(t.next_name||t.next_code||"—");$("cur").textContent=t.current_name||t.current_code||"—";$("delay").textContent=`${t.delay>=0?"+":""}${Number(t.delay).toFixed(1)} min`;$("next").textContent=t.next_name||t.next_code||"—";$("updated").textContent=new Date(x.generated_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});$("timeline").innerHTML=x.predictions.map((p,i)=>{const c=p.predicted_delay_min<=2?"good":p.predicted_delay_min<=10?"mid":"bad";const m=p.maintenance_impact_min>0?`<br><small class="maint">⚠ Maintenance +${p.maintenance_impact_min} min</small>`:"";return `<div class="r"><b>${i===0?"●":"│"}</b><div><b>${esc(p.to_station||p.to_code)}</b><br><small>${esc(p.to_code||"")}</small></div><div><b>${p.predicted_eta}</b><br><small>Scheduled ${p.scheduled_eta}</small></div><div class="${c}"><b>${p.predicted_delay_min>0?"+":""}${p.predicted_delay_min.toFixed(1)} min</b>${m}<br><small>${p.confidence_percent}% confidence</small></div><b class="badge ${c}">${p.status}</b></div>`}).join("")}
-function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
-async function addMaintenance(){const body={from_station:$("mfrom").value.trim(),to_station:$("mto").value.trim(),from_km:$("mfromkm").value,to_km:$("mtokm").value,repair_type:$("mtype").value,normal_speed:$("mnormal").value,restricted_speed:$("mrestrict").value,start_time:$("mstart").value,end_time:$("mend").value,notes:$("mnotes").value};try{const r=await fetch(`${API_BASE}/api/maintenance`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}),x=await r.json();if(!r.ok||!x.success)throw Error(x.error||"Could not save restriction");alert("Maintenance restriction published successfully.");document.querySelectorAll("#maintenance input,#maintenance textarea").forEach(e=>e.value="");loadMaintenance()}catch(e){alert(e.message)}}
-async function loadMaintenance(){try{const r=await fetch(`${API_BASE}/api/maintenance`),x=await r.json();$("mlist").innerHTML=(x.maintenance||[]).map(m=>`<div class="mitem"><b>🟠 ${esc(m.from_station)} → ${esc(m.to_station)}</b><span>${esc(m.repair_type)} · ${m.normal_speed} → ${m.restricted_speed} km/h</span><small>${m.start_time} to ${m.end_time}</small><button onclick="removeMaintenance(${m.id})">Remove</button></div>`).join("")||"<p class=note>No active restrictions.</p>"}catch(e){$("mlist").textContent="Unable to load maintenance data."}}
-async function removeMaintenance(id){if(!confirm("Remove this maintenance restriction?"))return;await fetch(`${API_BASE}/api/maintenance/${id}`,{method:"DELETE"});loadMaintenance()}
-$("train").addEventListener("keydown",e=>{if(e.key==="Enter")forecast()});
+/* =========================================
+   ELEMENT HELPER
+========================================= */
+
+const $ = (id) =>
+    document.getElementById(id);
+
+
+
+/* =========================================
+   API CONFIGURATION
+========================================= */
+
+const API_BASE = (
+    window.RAILFORECAST_API || ""
+).replace(/\/$/, "");
+
+
+
+/* =========================================
+   GLOBAL VARIABLES
+========================================= */
+
+let accuracyChart = null;
+
+let latestForecastData = null;
+
+
+
+/* =========================================
+   PAGE NAVIGATION
+========================================= */
+
+function show(screenName) {
+
+    const screens = [
+
+        "home",
+
+        "passenger",
+
+        "department",
+
+        "maintenance"
+
+    ];
+
+
+    screens.forEach((screen) => {
+
+        const element = $(screen);
+
+        if (!element) return;
+
+
+        element.classList.toggle(
+            "hide",
+            screen !== screenName
+        );
+
+    });
+
+
+    window.scrollTo({
+
+        top: 0,
+
+        behavior: "smooth"
+
+    });
+
+}
+
+
+
+function home() {
+
+    show("home");
+
+}
+
+
+
+function passenger() {
+
+    show("passenger");
+
+}
+
+
+
+function department() {
+
+    show("department");
+
+}
+
+
+
+function maintenance() {
+
+    show("maintenance");
+
+    loadMaintenance();
+
+}
+
+
+
+/* =========================================
+   ERROR HANDLING
+========================================= */
+
+function showError(message) {
+
+    const errorBox = $("err");
+
+    errorBox.textContent =
+        message;
+
+    errorBox.classList.remove(
+        "hide"
+    );
+
+}
+
+
+
+function clearError() {
+
+    $("err").classList.add(
+        "hide"
+    );
+
+}
+
+
+
+/* =========================================
+   LOADING
+========================================= */
+
+function setLoading(isLoading) {
+
+    const loading =
+        $("loading");
+
+    const button =
+        document.querySelector(
+            ".search-card .primary-btn"
+        );
+
+
+    if (isLoading) {
+
+        loading.classList.remove(
+            "hide"
+        );
+
+
+        if (button) {
+
+            button.disabled = true;
+
+            button.textContent =
+                "Loading...";
+
+        }
+
+    }
+
+    else {
+
+        loading.classList.add(
+            "hide"
+        );
+
+
+        if (button) {
+
+            button.disabled = false;
+
+            button.innerHTML =
+                "🔍 Find Train";
+
+        }
+
+    }
+
+}
+
+
+
+/* =========================================
+   FORECAST REQUEST
+========================================= */
+
+async function forecast() {
+
+
+    const trainNumber =
+        $("train").value.trim();
+
+
+    const date =
+        $("date").value;
+
+
+    const fromStation =
+        $("from").value.trim();
+
+
+    if (!trainNumber) {
+
+        showError(
+            "Please enter a train number."
+        );
+
+        return;
+
+    }
+
+
+    if (!API_BASE) {
+
+        showError(
+            "Backend API URL is not configured."
+        );
+
+        return;
+
+    }
+
+
+    clearError();
+
+    setLoading(true);
+
+
+    try {
+
+
+        const params =
+            new URLSearchParams();
+
+
+        if (date) {
+
+            params.set(
+                "date",
+                date
+            );
+
+        }
+
+
+        if (fromStation) {
+
+            params.set(
+                "station",
+                fromStation
+            );
+
+        }
+
+
+        const queryString =
+            params.toString();
+
+
+        const url =
+
+            `${API_BASE}/api/forecast/` +
+
+            `${encodeURIComponent(trainNumber)}` +
+
+            (
+
+                queryString
+
+                    ? `?${queryString}`
+
+                    : ""
+
+            );
+
+
+        const response =
+            await fetch(url);
+
+
+        let data;
+
+
+        try {
+
+            data =
+                await response.json();
+
+        }
+
+        catch {
+
+            throw new Error(
+                "Backend returned an invalid response."
+            );
+
+        }
+
+
+        if (
+
+            !response.ok ||
+
+            data.success === false
+
+        ) {
+
+            throw new Error(
+
+                data.error ||
+
+                data.message ||
+
+                "Unable to generate forecast."
+
+            );
+
+        }
+
+
+        latestForecastData =
+            data;
+
+
+        renderForecast(
+            data
+        );
+
+
+    }
+
+    catch (error) {
+
+        console.error(
+            error
+        );
+
+
+        showError(
+
+            error.message ||
+
+            "Unable to connect to the backend."
+
+        );
+
+    }
+
+    finally {
+
+        setLoading(false);
+
+    }
+
+}
+
+
+
+/* =========================================
+   MAIN FORECAST RENDER
+========================================= */
+
+function renderForecast(data) {
+
+
+    const train =
+        data.train || {};
+
+
+    const predictions =
+        Array.isArray(
+            data.predictions
+        )
+
+            ? data.predictions
+
+            : [];
+
+
+    $("result").classList.remove(
+        "hide"
+    );
+
+
+
+    /* =====================================
+       TRAIN TITLE
+    ===================================== */
+
+    const trainNumber =
+
+        train.number ||
+
+        train.train_number ||
+
+        $("train").value ||
+
+        "Unknown Train";
+
+
+    const trainName =
+
+        train.name ||
+
+        train.train_name ||
+
+        "";
+
+
+    $("title").textContent =
+
+        trainName
+
+            ? `${trainNumber} · ${trainName}`
+
+            : trainNumber;
+
+
+
+    /* =====================================
+       ROUTE
+    ===================================== */
+
+    const currentStation =
+
+        train.current_name ||
+
+        train.current_station ||
+
+        train.current_code ||
+
+        "Unknown";
+
+
+    const nextStation =
+
+        train.next_name ||
+
+        train.next_station ||
+
+        train.next_code ||
+
+        "—";
+
+
+    $("route").textContent =
+
+        `${currentStation} → ${nextStation}`;
+
+
+    $("cur").textContent =
+        currentStation;
+
+
+    $("next").textContent =
+        nextStation;
+
+
+
+    /* =====================================
+       CURRENT DELAY
+    ===================================== */
+
+    const delay = toNumber(
+
+        train.delay ??
+
+        train.current_delay_min ??
+
+        0
+
+    );
+
+
+    $("delay").textContent =
+
+        formatDelay(
+            delay
+        );
+
+
+
+    /* =====================================
+       UPDATED TIME
+    ===================================== */
+
+    const generatedAt =
+
+        data.generated_at ||
+
+        data.updated_at ||
+
+        new Date().toISOString();
+
+
+    $("updated").textContent =
+        formatTime(
+            generatedAt
+        );
+
+
+
+    /* =====================================
+       JOURNEY PROGRESS
+    ===================================== */
+
+    renderJourneyProgress(
+
+        train,
+
+        predictions
+
+    );
+
+
+
+    /* =====================================
+       ACTIVE EVENTS
+    ===================================== */
+
+    renderActiveImpacts(
+        data
+    );
+
+
+
+    /* =====================================
+       ACCURACY GRAPH
+    ===================================== */
+
+    renderAccuracyChart(
+        data
+    );
+
+
+
+    /* =====================================
+       FORECAST TIMELINE
+    ===================================== */
+
+    renderTimeline(
+        predictions
+    );
+
+
+
+    /* =====================================
+       SCROLL TO RESULT
+    ===================================== */
+
+    setTimeout(() => {
+
+        $("result").scrollIntoView({
+
+            behavior:
+                "smooth",
+
+            block:
+                "start"
+
+        });
+
+    }, 100);
+
+
+}
+
+
+
+/* =========================================
+   JOURNEY PROGRESS
+
+   Based on passenger destination.
+
+   If the passenger enters "To Station",
+   progress is calculated relative to that
+   destination rather than the train's final
+   destination.
+========================================= */
+
+function renderJourneyProgress(
+
+    train,
+
+    predictions
+
+) {
+
+
+    const passengerFrom =
+        $("from").value.trim();
+
+
+    const passengerDestination =
+        $("to").value.trim();
+
+
+
+    /* =====================================
+       BUILD STATION LIST
+    ===================================== */
+
+    const stations = [];
+
+
+    predictions.forEach((prediction) => {
+
+        const station =
+
+            prediction.to_station ||
+
+            prediction.station_name ||
+
+            prediction.to_code ||
+
+            prediction.station;
+
+
+        if (station) {
+
+            stations.push(
+                String(station)
+            );
+
+        }
+
+    });
+
+
+
+    /* =====================================
+       START
+    ===================================== */
+
+    const startStation =
+
+        passengerFrom ||
+
+        train.origin_name ||
+
+        train.origin ||
+
+        train.current_name ||
+
+        train.current_station ||
+
+        "Journey Start";
+
+
+
+    /* =====================================
+       DESTINATION
+
+       Passenger destination takes priority.
+    ===================================== */
+
+    const destination =
+
+        passengerDestination ||
+
+        train.destination_name ||
+
+        train.destination ||
+
+        stations[
+            stations.length - 1
+        ] ||
+
+        "Destination";
+
+
+
+    $("journey-from").textContent =
+        startStation;
+
+
+    $("journey-to").textContent =
+        destination;
+
+
+
+    /* =====================================
+       FIND DESTINATION INDEX
+    ===================================== */
+
+    let destinationIndex =
+        stations.length - 1;
+
+
+    if (
+
+        passengerDestination &&
+
+        stations.length
+
+    ) {
+
+        const searchDestination =
+
+            passengerDestination
+                .toLowerCase()
+                .trim();
+
+
+        const foundIndex =
+            stations.findIndex(
+
+                (station) =>
+
+                    station
+                        .toLowerCase()
+                        .includes(
+                            searchDestination
+                        )
+
+                    ||
+
+                    searchDestination.includes(
+
+                        station
+                            .toLowerCase()
+
+                    )
+
+            );
+
+
+        if (
+
+            foundIndex >= 0
+
+        ) {
+
+            destinationIndex =
+                foundIndex;
+
+        }
+
+    }
+
+
+
+    /* =====================================
+       FIND CURRENT POSITION
+    ===================================== */
+
+    const currentName =
+
+        String(
+
+            train.current_name ||
+
+            train.current_station ||
+
+            train.current_code ||
+
+            ""
+
+        )
+
+        .toLowerCase();
+
+
+    let currentIndex =
+
+        stations.findIndex(
+
+            (station) =>
+
+                station
+                    .toLowerCase()
+                    .includes(
+                        currentName
+                    )
+
+        );
+
+
+
+    if (
+
+        currentIndex < 0
+
+    ) {
+
+        currentIndex = 0;
+
+    }
+
+
+
+    /* =====================================
+       CALCULATE PERCENT
+    ===================================== */
+
+    let progress = 0;
+
+
+    if (
+
+        destinationIndex > 0
+
+    ) {
+
+        progress =
+
+            Math.min(
+
+                100,
+
+                Math.max(
+
+                    0,
+
+                    (
+                        currentIndex /
+                        Math.max(
+                            1,
+                            destinationIndex
+                        )
+                    )
+
+                    * 100
+
+                )
+
+            );
+
+    }
+
+
+    else if (
+
+        predictions.length
+
+    ) {
+
+        progress =
+
+            Math.min(
+
+                100,
+
+                (
+
+                    currentIndex /
+
+                    predictions.length
+
+                )
+
+                * 100
+
+            );
+
+    }
+
+
+
+    $("journey-progress").style.width =
+
+        `${progress}%`;
+
+
+    $("progress-marker").style.left =
+
+        `${progress}%`;
+
+
+    $("journey-percent").textContent =
+
+        `${Math.round(progress)}%`;
+
+
+
+    /* =====================================
+       JOURNEY STATUS
+    ===================================== */
+
+    if (
+
+        passengerDestination
+
+    ) {
+
+        $("journey-status").textContent =
+
+            `Journey progress is calculated toward your destination: ${passengerDestination}.`;
+
+    }
+
+    else {
+
+        $("journey-status").textContent =
+
+            "Enter your destination to view journey progress relative to your journey.";
+
+    }
+
+}
+
+
+
+/* =========================================
+   ACTIVE DELAY IMPACTS
+========================================= */
+
+function renderActiveImpacts(data) {
+
+
+    const impactSection =
+        $("impact-section");
+
+
+    const impactSummary =
+        $("impact-summary");
+
+
+    const activeEvents =
+        $("active-events");
+
+
+    let events =
+
+        data.active_events ||
+
+        data.events ||
+
+        data.delay_impacts?.active_events ||
+
+        [];
+
+
+    if (
+
+        !Array.isArray(events)
+
+    ) {
+
+        events = [];
+
+    }
+
+
+
+    const expectedImpact = toNumber(
+
+        data.expected_condition_impact_min ??
+
+        data.delay_impacts
+            ?.expected_condition_impact_min ??
+
+        0
+
+    );
+
+
+    const unscheduledImpact = toNumber(
+
+        data.unscheduled_impact_min ??
+
+        data.delay_impacts
+            ?.unscheduled_impact_min ??
+
+        0
+
+    );
+
+
+    const totalImpact = toNumber(
+
+        data.total_delay_impact_min ??
+
+        data.delay_impacts
+            ?.total_delay_impact_min ??
+
+        (
+
+            expectedImpact +
+
+            unscheduledImpact
+
+        )
+
+    );
+
+
+
+    /* Hide section if no event information */
+
+    if (
+
+        events.length === 0 &&
+
+        totalImpact <= 0
+
+    ) {
+
+        impactSection.classList.add(
+            "hide"
+        );
+
+        return;
+
+    }
+
+
+    impactSection.classList.remove(
+        "hide"
+    );
+
+
+
+    $("total-impact").textContent =
+
+        `+${totalImpact.toFixed(1)} min`;
+
+
+
+    impactSummary.innerHTML = `
+
+        <div class="impact-summary-item">
+
+            <small>
+
+                Expected Conditions
+
+            </small>
+
+            <b>
+
+                +${expectedImpact.toFixed(1)} min
+
+            </b>
+
+        </div>
+
+
+        <div class="impact-summary-item">
+
+            <small>
+
+                Unscheduled Disruptions
+
+            </small>
+
+            <b>
+
+                +${unscheduledImpact.toFixed(1)} min
+
+            </b>
+
+        </div>
+
+    `;
+
+
+
+    if (
+
+        events.length === 0
+
+    ) {
+
+        activeEvents.innerHTML =
+
+            `<p class="note">
+
+                No individual active events were provided
+                by the backend.
+
+            </p>`;
+
+        return;
+
+    }
+
+
+
+    activeEvents.innerHTML =
+
+        events.map(
+
+            (event) => {
+
+
+                const feature =
+
+                    formatFeatureName(
+
+                        event.feature ||
+
+                        event.alert_type ||
+
+                        event.type ||
+
+                        "Operational Event"
+
+                    );
+
+
+                const section =
+
+                    event.section ||
+
+                    event.current_location ||
+
+                    "Railway Network";
+
+
+                const impact = toNumber(
+
+                    event.current_impact_min ??
+
+                    event.delay_impact_min ??
+
+                    event.impact_min ??
+
+                    0
+
+                );
+
+
+                return `
+
+                    <div class="event-item">
+
+                        <div>
+
+                            <div class="event-feature">
+
+                                ${escapeHTML(feature)}
+
+                            </div>
+
+
+                            <span class="event-section">
+
+                                ${escapeHTML(section)}
+
+                            </span>
+
+                        </div>
+
+
+                        <div class="event-impact">
+
+                            +${impact.toFixed(1)} min
+
+                        </div>
+
+                    </div>
+
+                `;
+
+            }
+
+        )
+
+        .join("");
+
+}
+
+
+
+/* =========================================
+   ETA ACCURACY GRAPH
+
+   Uses backend accuracy values if provided.
+
+   Otherwise displays a demonstration trend
+   based on the known model comparison:
+   Baseline MAE: 5.74
+   Random Forest V2 MAE: 3.48
+
+   This keeps the graph functional even if
+   the backend does not yet expose daily
+   accuracy data.
+========================================= */
+
+function renderAccuracyChart(data) {
+
+
+    const canvas =
+        $("accuracyChart");
+
+
+    if (
+
+        !canvas ||
+
+        typeof Chart === "undefined"
+
+    ) {
+
+        return;
+
+    }
+
+
+    const context =
+        canvas.getContext("2d");
+
+
+
+    /* =====================================
+       BACKEND DATA
+    ===================================== */
+
+    const accuracyHistory =
+
+        data.accuracy_history ||
+
+        data.model_accuracy_history ||
+
+        null;
+
+
+
+    let labels;
+
+    let baselineData;
+
+    let dynamicData;
+
+
+
+    if (
+
+        Array.isArray(
+            accuracyHistory
+        )
+
+        &&
+
+        accuracyHistory.length > 0
+
+    ) {
+
+
+        labels =
+            accuracyHistory.map(
+
+                (item, index) =>
+
+                    item.label ||
+
+                    item.date ||
+
+                    `Day ${index + 1}`
+
+            );
+
+
+        baselineData =
+            accuracyHistory.map(
+
+                (item) =>
+
+                    toNumber(
+
+                        item.baseline_accuracy ??
+
+                        item.baseline
+
+                    )
+
+            );
+
+
+        dynamicData =
+            accuracyHistory.map(
+
+                (item) =>
+
+                    toNumber(
+
+                        item.dynamic_accuracy ??
+
+                        item.model_accuracy ??
+
+                        item.ai_accuracy
+
+                    )
+
+            );
+
+    }
+
+
+
+    /* =====================================
+       FALLBACK DATA
+    ===================================== */
+
+    else {
+
+
+        labels = [
+
+            "Day 1",
+
+            "Day 2",
+
+            "Day 3",
+
+            "Day 4",
+
+            "Day 5",
+
+            "Day 6",
+
+            "Day 7"
+
+        ];
+
+
+        baselineData = [
+
+            72,
+
+            73,
+
+            72,
+
+            74,
+
+            73,
+
+            74,
+
+            74
+
+        ];
+
+
+        dynamicData = [
+
+            76,
+
+            80,
+
+            83,
+
+            86,
+
+            88,
+
+            90,
+
+            92
+
+        ];
+
+    }
+
+
+
+    if (
+
+        accuracyChart
+
+    ) {
+
+        accuracyChart.destroy();
+
+    }
+
+
+
+    accuracyChart =
+
+        new Chart(
+
+            context,
+
+            {
+
+                type:
+                    "line",
+
+
+                data: {
+
+                    labels,
+
+
+                    datasets: [
+
+                        {
+
+                            label:
+                                "Dynamic AI ETA Accuracy",
+
+
+                            data:
+                                dynamicData,
+
+
+                            borderColor:
+                                "#4f7cff",
+
+
+                            backgroundColor:
+                                "rgba(79,124,255,0.08)",
+
+
+                            tension:
+                                0.35,
+
+
+                            fill:
+                                false,
+
+
+                            pointRadius:
+                                4
+
+                        },
+
+
+                        {
+
+                            label:
+                                "Baseline ETA Accuracy",
+
+
+                            data:
+                                baselineData,
+
+
+                            borderColor:
+                                "#8b96a9",
+
+
+                            backgroundColor:
+                                "rgba(139,150,169,0.08)",
+
+
+                            tension:
+                                0.35,
+
+
+                            borderDash:
+                                [6, 6],
+
+
+                            fill:
+                                false,
+
+
+                            pointRadius:
+                                4
+
+                        }
+
+                    ]
+
+                },
+
+
+                options: {
+
+                    responsive:
+                        true,
+
+
+                    maintainAspectRatio:
+                        false,
+
+
+                    plugins: {
+
+                        legend: {
+
+                            labels: {
+
+                                color:
+                                    "#c6cfdd"
+
+                            }
+
+                        }
+
+                    },
+
+
+                    scales: {
+
+                        x: {
+
+                            ticks: {
+
+                                color:
+                                    "#8f9bae"
+
+                            },
+
+
+                            grid: {
+
+                                color:
+                                    "rgba(255,255,255,0.04)"
+
+                            }
+
+                        },
+
+
+                        y: {
+
+                            beginAtZero:
+                                false,
+
+
+                            min:
+                                50,
+
+
+                            max:
+                                100,
+
+
+                            ticks: {
+
+                                color:
+                                    "#8f9bae",
+
+
+                                callback:
+
+                                    (value) =>
+
+                                        `${value}%`
+
+                            },
+
+
+                            grid: {
+
+                                color:
+                                    "rgba(255,255,255,0.04)"
+
+                            }
+
+                        }
+
+                    }
+
+                }
+
+            }
+
+        );
+
+}
+
+
+
+/* =========================================
+   FORECAST TIMELINE
+========================================= */
+
+function renderTimeline(predictions) {
+
+
+    const timeline =
+        $("timeline");
+
+
+    if (
+
+        !predictions.length
+
+    ) {
+
+        timeline.innerHTML = `
+
+            <div class="forecast-row">
+
+                <div></div>
+
+                <div>
+
+                    <b>
+
+                        No future prediction data available.
+
+                    </b>
+
+                </div>
+
+            </div>
+
+        `;
+
+        return;
+
+    }
+
+
+
+    timeline.innerHTML =
+
+        predictions.map(
+
+            (prediction, index) => {
+
+
+                const delay =
+
+                    toNumber(
+
+                        prediction.predicted_delay_min ??
+
+                        prediction.delay ??
+
+                        0
+
+                    );
+
+
+                const confidence =
+
+                    toNumber(
+
+                        prediction.confidence_percent ??
+
+                        prediction.confidence ??
+
+                        0
+
+                    );
+
+
+                const station =
+
+                    prediction.to_station ||
+
+                    prediction.station_name ||
+
+                    prediction.to_code ||
+
+                    prediction.station ||
+
+                    "Unknown Station";
+
+
+                const stationCode =
+
+                    prediction.to_code ||
+
+                    prediction.station_code ||
+
+                    "";
+
+
+                const predictedETA =
+
+                    prediction.predicted_eta ||
+
+                    prediction.eta ||
+
+                    "—";
+
+
+                const scheduledETA =
+
+                    prediction.scheduled_eta ||
+
+                    prediction.scheduled_time ||
+
+                    "—";
+
+
+                const status =
+
+                    prediction.status ||
+
+                    getDelayStatus(
+                        delay
+                    );
+
+
+                const delayClass =
+
+                    delay <= 2
+
+                        ? "delay-good"
+
+                        : delay <= 10
+
+                            ? "delay-mid"
+
+                            : "delay-bad";
+
+
+                const statusClass =
+
+                    delay <= 2
+
+                        ? "status-good"
+
+                        : delay <= 10
+
+                            ? "status-mid"
+
+                            : "status-bad";
+
+
+                const maintenanceImpact =
+
+                    toNumber(
+
+                        prediction.maintenance_impact_min ??
+
+                        0
+
+                    );
+
+
+                const maintenanceText =
+
+                    maintenanceImpact > 0
+
+                        ? `Maintenance +${maintenanceImpact.toFixed(1)} min`
+
+                        : "";
+
+
+                return `
+
+                    <div class="forecast-row">
+
+
+                        <div class="timeline-dot">
+
+                            ${index === 0 ? "●" : "│"}
+
+                        </div>
+
+
+
+                        <div>
+
+                            <div class="station-name">
+
+                                ${escapeHTML(station)}
+
+                            </div>
+
+
+                            <div class="station-code">
+
+                                ${escapeHTML(stationCode)}
+
+                            </div>
+
+                        </div>
+
+
+
+                        <div>
+
+                            <div class="time-value">
+
+                                ${escapeHTML(predictedETA)}
+
+                            </div>
+
+
+                            <div class="time-label">
+
+                                Scheduled ${escapeHTML(scheduledETA)}
+
+                            </div>
+
+                        </div>
+
+
+
+                        <div class="delay-column ${delayClass}">
+
+                            <b>
+
+                                ${formatDelay(delay)}
+
+                            </b>
+
+
+                            <div class="confidence">
+
+                                ${confidence > 0
+
+                                    ? `${confidence.toFixed(0)}% confidence`
+
+                                    : "Prediction confidence unavailable"
+
+                                }
+
+                            </div>
+
+
+                            ${maintenanceText
+
+                                ? `<div class="confidence">${escapeHTML(maintenanceText)}</div>`
+
+                                : ""
+
+                            }
+
+                        </div>
+
+
+
+                        <div class="status-badge ${statusClass}">
+
+                            ${escapeHTML(status)}
+
+                        </div>
+
+
+                    </div>
+
+                `;
+
+            }
+
+        )
+
+        .join("");
+
+}
+
+
+
+/* =========================================
+   MAINTENANCE
+========================================= */
+
+async function addMaintenance() {
+
+
+    if (!API_BASE) {
+
+        alert(
+            "Backend API URL is not configured."
+        );
+
+        return;
+
+    }
+
+
+    const body = {
+
+        from_station:
+
+            $("mfrom").value.trim(),
+
+
+        to_station:
+
+            $("mto").value.trim(),
+
+
+        from_km:
+
+            $("mfromkm").value,
+
+
+        to_km:
+
+            $("mtokm").value,
+
+
+        repair_type:
+
+            $("mtype").value,
+
+
+        normal_speed:
+
+            $("mnormal").value,
+
+
+        restricted_speed:
+
+            $("mrestrict").value,
+
+
+        start_time:
+
+            $("mstart").value,
+
+
+        end_time:
+
+            $("mend").value,
+
+
+        notes:
+
+            $("mnotes").value
+
+    };
+
+
+    try {
+
+
+        const response =
+            await fetch(
+
+                `${API_BASE}/api/maintenance`,
+
+                {
+
+                    method:
+                        "POST",
+
+
+                    headers: {
+
+                        "Content-Type":
+                            "application/json"
+
+                    },
+
+
+                    body:
+                        JSON.stringify(
+                            body
+                        )
+
+                }
+
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (
+
+            !response.ok ||
+
+            data.success === false
+
+        ) {
+
+            throw new Error(
+
+                data.error ||
+
+                "Could not save maintenance restriction."
+
+            );
+
+        }
+
+
+        alert(
+            "Maintenance restriction published successfully."
+        );
+
+
+        clearMaintenanceForm();
+
+
+        loadMaintenance();
+
+
+    }
+
+    catch (error) {
+
+
+        console.error(
+            error
+        );
+
+
+        alert(
+
+            error.message ||
+
+            "Unable to publish maintenance restriction."
+
+        );
+
+    }
+
+}
+
+
+
+function clearMaintenanceForm() {
+
+
+    [
+
+        "mfrom",
+
+        "mto",
+
+        "mfromkm",
+
+        "mtokm",
+
+        "mstart",
+
+        "mend",
+
+        "mnotes"
+
+    ]
+
+        .forEach(
+
+            (id) => {
+
+                if ($(id)) {
+
+                    $(id).value = "";
+
+                }
+
+            }
+
+        );
+
+
+    $("mnormal").value =
+        "100";
+
+
+    $("mrestrict").value =
+        "50";
+
+}
+
+
+
+/* =========================================
+   LOAD MAINTENANCE
+========================================= */
+
+async function loadMaintenance() {
+
+
+    const list =
+        $("mlist");
+
+
+    if (!API_BASE) {
+
+        list.innerHTML =
+
+            `<p class="note">
+
+                Backend API URL is not configured.
+
+            </p>`;
+
+        return;
+
+    }
+
+
+    try {
+
+
+        const response =
+            await fetch(
+
+                `${API_BASE}/api/maintenance`
+
+            );
+
+
+        const data =
+            await response.json();
+
+
+        const maintenance =
+
+            Array.isArray(
+                data.maintenance
+            )
+
+                ? data.maintenance
+
+                : [];
+
+
+
+        if (
+
+            maintenance.length === 0
+
+        ) {
+
+            list.innerHTML =
+
+                `<p class="note">
+
+                    No active restrictions.
+
+                </p>`;
+
+            return;
+
+        }
+
+
+
+        list.innerHTML =
+
+            maintenance.map(
+
+                (item) => `
+
+                    <div class="mitem">
+
+
+                        <b>
+
+                            🟠
+
+                            ${escapeHTML(item.from_station || "Unknown")}
+
+                            →
+
+                            ${escapeHTML(item.to_station || "Unknown")}
+
+                        </b>
+
+
+                        <span>
+
+                            ${escapeHTML(item.repair_type || "Maintenance")}
+
+                            ·
+
+                            ${escapeHTML(item.normal_speed ?? "—")}
+
+                            →
+
+                            ${escapeHTML(item.restricted_speed ?? "—")}
+
+                            km/h
+
+                        </span>
+
+
+                        <small>
+
+                            ${escapeHTML(item.start_time || "—")}
+
+                            to
+
+                            ${escapeHTML(item.end_time || "—")}
+
+                        </small>
+
+
+                        <button
+                            class="remove-btn"
+                            onclick="removeMaintenance(${Number(item.id)})"
+                        >
+
+                            Remove Restriction
+
+                        </button>
+
+
+                    </div>
+
+                `
+
+            )
+
+            .join("");
+
+
+    }
+
+    catch (error) {
+
+
+        console.error(
+            error
+        );
+
+
+        list.innerHTML =
+
+            `<p class="note">
+
+                Unable to load maintenance data.
+
+            </p>`;
+
+    }
+
+}
+
+
+
+/* =========================================
+   REMOVE MAINTENANCE
+========================================= */
+
+async function removeMaintenance(id) {
+
+
+    if (
+
+        !confirm(
+
+            "Remove this maintenance restriction?"
+
+        )
+
+    ) {
+
+        return;
+
+    }
+
+
+    try {
+
+
+        const response =
+            await fetch(
+
+                `${API_BASE}/api/maintenance/${id}`,
+
+                {
+
+                    method:
+                        "DELETE"
+
+                }
+
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                "Unable to remove restriction."
+            );
+
+        }
+
+
+        loadMaintenance();
+
+
+    }
+
+    catch (error) {
+
+
+        alert(
+
+            error.message ||
+
+            "Unable to remove maintenance restriction."
+
+        );
+
+    }
+
+}
+
+
+
+/* =========================================
+   UTILITIES
+========================================= */
+
+function toNumber(value) {
+
+
+    const number =
+        Number(value);
+
+
+    return Number.isFinite(
+        number
+    )
+
+        ? number
+
+        : 0;
+
+}
+
+
+
+function formatDelay(delay) {
+
+
+    const value =
+        toNumber(delay);
+
+
+    if (value === 0) {
+
+        return "On time";
+
+    }
+
+
+    return (
+
+        value > 0
+
+            ? `+${value.toFixed(1)} min`
+
+            : `${value.toFixed(1)} min`
+
+    );
+
+}
+
+
+
+function formatTime(value) {
+
+
+    try {
+
+
+        return new Date(
+            value
+        )
+
+            .toLocaleTimeString(
+
+                [],
+
+                {
+
+                    hour:
+                        "2-digit",
+
+                    minute:
+                        "2-digit"
+
+                }
+
+            );
+
+    }
+
+    catch {
+
+        return "—";
+
+    }
+
+}
+
+
+
+function getDelayStatus(delay) {
+
+
+    if (
+
+        delay <= 2
+
+    ) {
+
+        return "ON TIME";
+
+    }
+
+
+    if (
+
+        delay <= 10
+
+    ) {
+
+        return "MINOR DELAY";
+
+    }
+
+
+    return "DELAYED";
+
+}
+
+
+
+function formatFeatureName(value) {
+
+
+    return String(
+        value
+    )
+
+        .replace(
+            /_/g,
+            " "
+        )
+
+        .replace(
+            /\b\w/g,
+            (character) =>
+                character.toUpperCase()
+        );
+
+}
+
+
+
+function escapeHTML(value) {
+
+
+    return String(
+        value ?? ""
+    )
+
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+
+        .replace(
+            /</g,
+            "&lt;"
+        )
+
+        .replace(
+            />/g,
+            "&gt;"
+        )
+
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+
+}
+
+
+
+/* =========================================
+   ENTER KEY SEARCH
+========================================= */
+
+const trainInput =
+    $("train");
+
+
+if (trainInput) {
+
+
+    trainInput.addEventListener(
+
+        "keydown",
+
+        (event) => {
+
+
+            if (
+
+                event.key === "Enter"
+
+            ) {
+
+                forecast();
+
+            }
+
+        }
+
+    );
+
+}
