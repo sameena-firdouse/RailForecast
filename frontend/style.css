@@ -671,33 +671,20 @@ main {
 
 
 .hero-content h1 span {
-
-    display:
-        block;
-
-    background:
-
-        linear-gradient(
-            90deg,
-            #38bdf8,
-            #22d3ee,
-            #818cf8
-        );
-
-    -webkit-background-clip:
-        text;
-
-    -webkit-text-fill-color:
-        transparent;
-
+    display: block;
+    background: linear-gradient(
+        90deg,
+        #38bdf8,
+        #22d3ee,
+        #818cf8
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
-
 .hero-description {
-
-    max-width:
-        700px;
-
+    max-width: 700px;
+    
     margin:
         25px auto 48px;
 
@@ -2620,6 +2607,7 @@ select option {
         );
 
     -webkit-background-clip:
+    
         text;
 
     -webkit-text-fill-color:
