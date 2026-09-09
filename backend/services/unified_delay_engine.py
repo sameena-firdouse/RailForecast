@@ -1,12 +1,40 @@
+# ==========================================
+# UNIFIED DELAY ENGINE
+# ==========================================
+
+
+def safe_float(value, default=0.0):
+
+    try:
+
+        if value is None:
+            return default
+
+        return float(value)
+
+    except (
+        TypeError,
+        ValueError
+    ):
+
+        return default
+
+
+# ==========================================
+# COMBINE DELAY IMPACTS
+# ==========================================
+
 def combine_delay_impacts(events):
 
     expected_condition_impact = 0.0
+
     unscheduled_impact = 0.0
 
     active_events = []
 
 
     for event in events:
+
 
         condition_type = str(
             event.get(
@@ -17,19 +45,19 @@ def combine_delay_impacts(events):
 
 
         # ==================================
-        # EXPECTED / RECURRING CONDITIONS
+        # EXPECTED CONDITIONS
         # ==================================
 
         if condition_type == "expected":
 
-            current_impact = float(
+            current_impact = safe_float(
                 event.get(
                     "current_impact_min",
                     0
                 )
             )
 
-            normal_impact = float(
+            normal_impact = safe_float(
                 event.get(
                     "normal_impact_min",
                     0
@@ -37,69 +65,100 @@ def combine_delay_impacts(events):
             )
 
 
-            # Only add the additional impact
-            # beyond the normal historical
-            # operational condition
+            # Only add impact beyond
+            # historical normal condition
 
             additional_impact = (
+
                 current_impact
+
                 -
+
                 normal_impact
+
             )
 
 
             expected_condition_impact += max(
+
                 0,
+
                 additional_impact
+
             )
 
 
         # ==================================
-        # UNSCHEDULED / DISRUPTION EVENTS
+        # UNSCHEDULED EVENTS
         # ==================================
 
         elif condition_type in [
+
             "unscheduled",
+
             "disruption"
+
         ]:
 
-            impact = float(
+            impact = safe_float(
+
                 event.get(
+
                     "current_impact_min",
 
                     event.get(
+
                         "delay_impact_min",
+
                         0
+
                     )
+
                 )
+
             )
 
 
             unscheduled_impact += max(
+
                 0,
+
                 impact
+
             )
 
 
         # ==================================
-        # UNKNOWN CONDITION TYPE
+        # UNKNOWN EVENT
         # ==================================
 
         else:
 
-            # Safely treat unknown event types
-            # as additional disruption impact
+            impact = safe_float(
 
-            impact = float(
                 event.get(
+
                     "current_impact_min",
-                    0
+
+                    event.get(
+
+                        "delay_impact_min",
+
+                        0
+
+                    )
+
                 )
+
             )
 
+
             unscheduled_impact += max(
+
                 0,
+
                 impact
+
             )
 
 
