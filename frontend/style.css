@@ -2502,3 +2502,7 @@ if (trainInput) {
     );
 
 }
+/* FORCE PAGE VISIBILITY */
+.screen.hide {
+    display: none !important;
+}
