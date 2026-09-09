@@ -1,943 +1,1487 @@
 /* =========================================
    RAILFORECAST
-   COMPLETE JAVASCRIPT - NEW VERSION
+   COMPLETE JAVASCRIPT
 ========================================= */
 
 
 /* =========================================
-   HELPER
+   GLOBAL VARIABLES
 ========================================= */
 
-const $ = (id) => document.getElementById(id);
+let accuracyChart = null;
+
+let currentSimulation = null;
+
+
+/* =========================================
+   DEMO TRAIN DATA
+========================================= */
+
+const trainData = {
+
+    number: "12705",
+
+    name:
+        "Guntur–Secunderabad Intercity Express",
+
+    route:
+        "Guntur Junction → Secunderabad Junction",
+
+    currentStation:
+        "Khammam",
+
+    currentCode:
+        "KMM",
+
+    currentDelay:
+        12,
+
+    nextStation:
+        "Dornakal Junction",
+
+    updated:
+        "Just now",
+
+    progress:
+        42,
+
+    from:
+        "Guntur Junction",
+
+    to:
+        "Secunderabad Junction"
+
+};
+
+
+/* =========================================
+   STATION FORECAST DATA
+========================================= */
+
+const stationForecast = [
+
+    {
+
+        station:
+            "Guntur Junction",
+
+        code:
+            "GNT",
+
+        scheduled:
+            "10:30 AM",
+
+        predicted:
+            "10:35 AM",
+
+        delay:
+            5,
+
+        status:
+            "Passed"
+
+    },
+
+
+    {
+
+        station:
+            "Mangalagiri",
+
+        code:
+            "MGL",
+
+        scheduled:
+            "12:30 PM",
+
+        predicted:
+            "12:42 PM",
+
+        delay:
+            12,
+
+        status:
+            "Passed"
+
+    },
+
+
+    {
+
+        station:
+            "Vijayawada Junction",
+
+        code:
+            "BZA",
+
+        scheduled:
+            "1:15 PM",
+
+        predicted:
+            "1:28 PM",
+
+        delay:
+            13,
+
+        status:
+            "Passed"
+
+    },
+
+
+    {
+
+        station:
+            "Khammam",
+
+        code:
+            "KMM",
+
+        scheduled:
+            "1:30 PM",
+
+        predicted:
+            "1:42 PM",
+
+        delay:
+            12,
+
+        status:
+            "Current"
+
+    },
+
+
+    {
+
+        station:
+            "Dornakal Junction",
+
+        code:
+            "DKJ",
+
+        scheduled:
+            "2:05 PM",
+
+        predicted:
+            "2:17 PM",
+
+        delay:
+            12,
+
+        status:
+            "Upcoming"
+
+    },
+
+
+    {
+
+        station:
+            "Mahbubabad",
+
+        code:
+            "MABD",
+
+        scheduled:
+            "2:40 PM",
+
+        predicted:
+            "2:54 PM",
+
+        delay:
+            14,
+
+        status:
+            "Upcoming"
+
+    },
+
+
+    {
+
+        station:
+            "Nekonda",
+
+        code:
+            "NKD",
+
+        scheduled:
+            "3:10 PM",
+
+        predicted:
+            "3:26 PM",
+
+        delay:
+            16,
+
+        status:
+            "Upcoming"
+
+    },
+
+
+    {
+
+        station:
+            "Warangal Junction",
+
+        code:
+            "WL",
+
+        scheduled:
+            "3:50 PM",
+
+        predicted:
+            "4:06 PM",
+
+        delay:
+            16,
+
+        status:
+            "Upcoming"
+
+    },
+
+
+    {
+
+        station:
+            "Kazipet Junction",
+
+        code:
+            "KZJ",
+
+        scheduled:
+            "4:30 PM",
+
+        predicted:
+            "4:47 PM",
+
+        delay:
+            17,
+
+        status:
+            "Upcoming"
+
+    },
+
+
+    {
+
+        station:
+            "Jangaon",
+
+        code:
+            "ZN",
+
+        scheduled:
+            "5:15 PM",
+
+        predicted:
+            "5:34 PM",
+
+        delay:
+            19,
+
+        status:
+            "Upcoming"
+
+    },
+
+
+    {
+
+        station:
+            "Aler",
+
+        code:
+            "ALER",
+
+        scheduled:
+            "5:50 PM",
+
+        predicted:
+            "6:12 PM",
+
+        delay:
+            22,
+
+        status:
+            "Upcoming"
+
+    },
+
+
+    {
+
+        station:
+            "Bhongir",
+
+        code:
+            "BG",
+
+        scheduled:
+            "6:20 PM",
+
+        predicted:
+            "6:45 PM",
+
+        delay:
+            25,
+
+        status:
+            "Upcoming"
+
+    },
+
+
+    {
+
+        station:
+            "Charlapalli",
+
+        code:
+            "CHZ",
+
+        scheduled:
+            "6:45 PM",
+
+        predicted:
+            "7:12 PM",
+
+        delay:
+            27,
+
+        status:
+            "Upcoming"
+
+    },
+
+
+    {
+
+        station:
+            "Secunderabad Junction",
+
+        code:
+            "SC",
+
+        scheduled:
+            "7:10 PM",
+
+        predicted:
+            "7:42 PM",
+
+        delay:
+            32,
+
+        status:
+            "Destination"
+
+    }
+
+];
+
+
+/* =========================================
+   SIMULATION FEATURE DEFINITIONS
+========================================= */
+
+const simulationFeatures = {
+
+
+    /* =====================================
+       SIGNAL
+    ===================================== */
+
+    signal: {
+
+        title:
+            "Signal Point Simulation",
+
+        description:
+            "Configure a signal malfunction or signal-related operational delay.",
+
+        fields: [
+
+            {
+
+                id:
+                    "sim-train",
+
+                label:
+                    "Train Number",
+
+                type:
+                    "text",
+
+                value:
+                    "12705"
+
+            },
+
+
+            {
+
+                id:
+                    "sim-section",
+
+                label:
+                    "Affected Section",
+
+                type:
+                    "select",
+
+                options: [
+
+                    "Vijayawada → Madhira",
+
+                    "Madhira → Khammam",
+
+                    "Khammam → Dornakal",
+
+                    "Warangal → Kazipet"
+
+                ]
+
+            },
+
+
+            {
+
+                id:
+                    "signal-status",
+
+                label:
+                    "Signal Condition",
+
+                type:
+                    "select",
+
+                options: [
+
+                    "Red Signal Hold",
+
+                    "Signal Failure",
+
+                    "Signal Communication Failure",
+
+                    "Temporary Signal Hold"
+
+                ]
+
+            },
+
+
+            {
+
+                id:
+                    "signal-delay",
+
+                label:
+                    "Expected Signal Delay (minutes)",
+
+                type:
+                    "number",
+
+                value:
+                    "15"
+
+            }
+
+        ]
+
+    },
+
+
+    /* =====================================
+       CONGESTION
+    ===================================== */
+
+    congestion: {
+
+        title:
+            "Route Congestion Simulation",
+
+        description:
+            "Configure congestion caused by heavy railway traffic.",
+
+        fields: [
+
+            {
+
+                id:
+                    "sim-train",
+
+                label:
+                    "Train Number",
+
+                type:
+                    "text",
+
+                value:
+                    "12705"
+
+            },
+
+
+            {
+
+                id:
+                    "sim-section",
+
+                label:
+                    "Congested Section",
+
+                type:
+                    "select",
+
+                options: [
+
+                    "Vijayawada → Madhira",
+
+                    "Madhira → Khammam",
+
+                    "Khammam → Dornakal",
+
+                    "Warangal → Kazipet"
+
+                ]
+
+            },
+
+
+            {
+
+                id:
+                    "traffic-level",
+
+                label:
+                    "Traffic Density",
+
+                type:
+                    "select",
+
+                options: [
+
+                    "Moderate",
+
+                    "High",
+
+                    "Severe"
+
+                ]
+
+            },
+
+
+            {
+
+                id:
+                    "trains-count",
+
+                label:
+                    "Number of Trains Ahead",
+
+                type:
+                    "number",
+
+                value:
+                    "3"
+
+            }
+
+        ]
+
+    },
+
+
+    /* =====================================
+       PRECEDING TRAIN
+    ===================================== */
+
+    preceding: {
+
+        title:
+            "Preceding Train Delay Simulation",
+
+        description:
+            "Analyze delay propagation from a preceding train.",
+
+        fields: [
+
+            {
+
+                id:
+                    "sim-train",
+
+                label:
+                    "Your Train Number",
+
+                type:
+                    "text",
+
+                value:
+                    "12705"
+
+            },
+
+
+            {
+
+                id:
+                    "preceding-train",
+
+                label:
+                    "Preceding Train Number",
+
+                type:
+                    "text",
+
+                value:
+                    "12706"
+
+            },
+
+
+            {
+
+                id:
+                    "sim-section",
+
+                label:
+                    "Affected Section",
+
+                type:
+                    "select",
+
+                options: [
+
+                    "Vijayawada → Madhira",
+
+                    "Madhira → Khammam",
+
+                    "Khammam → Dornakal",
+
+                    "Warangal → Kazipet"
+
+                ]
+
+            },
+
+
+            {
+
+                id:
+                    "preceding-delay",
+
+                label:
+                    "Preceding Train Delay (minutes)",
+
+                type:
+                    "number",
+
+                value:
+                    "20"
+
+            }
+
+        ]
+
+    },
+
+
+    /* =====================================
+       SPEED RESTRICTION
+    ===================================== */
+
+    speed: {
+
+        title:
+            "Temporary Speed Restriction Simulation",
+
+        description:
+            "Calculate ETA impact caused by temporary speed restrictions.",
+
+        fields: [
+
+            {
+
+                id:
+                    "sim-train",
+
+                label:
+                    "Train Number",
+
+                type:
+                    "text",
+
+                value:
+                    "12705"
+
+            },
+
+
+            {
+
+                id:
+                    "sim-section",
+
+                label:
+                    "Restricted Section",
+
+                type:
+                    "select",
+
+                options: [
+
+                    "Vijayawada → Madhira",
+
+                    "Madhira → Khammam",
+
+                    "Khammam → Dornakal",
+
+                    "Warangal → Kazipet"
+
+                ]
+
+            },
+
+
+            {
+
+                id:
+                    "normal-speed",
+
+                label:
+                    "Normal Speed (km/h)",
+
+                type:
+                    "number",
+
+                value:
+                    "110"
+
+            },
+
+
+            {
+
+                id:
+                    "restricted-speed",
+
+                label:
+                    "Restricted Speed (km/h)",
+
+                type:
+                    "number",
+
+                value:
+                    "50"
+
+            },
+
+
+            {
+
+                id:
+                    "restriction-distance",
+
+                label:
+                    "Restricted Distance (km)",
+
+                type:
+                    "number",
+
+                value:
+                    "15"
+
+            }
+
+        ]
+
+    },
+
+
+    /* =====================================
+       MAINTENANCE
+    ===================================== */
+
+    maintenance: {
+
+        title:
+            "Unscheduled Maintenance Block Simulation",
+
+        description:
+            "Simulate emergency maintenance and infrastructure blocks.",
+
+        fields: [
+
+            {
+
+                id:
+                    "sim-train",
+
+                label:
+                    "Train Number",
+
+                type:
+                    "text",
+
+                value:
+                    "12705"
+
+            },
+
+
+            {
+
+                id:
+                    "sim-section",
+
+                label:
+                    "Maintenance Section",
+
+                type:
+                    "select",
+
+                options: [
+
+                    "Vijayawada → Madhira",
+
+                    "Madhira → Khammam",
+
+                    "Khammam → Dornakal",
+
+                    "Warangal → Kazipet"
+
+                ]
+
+            },
+
+
+            {
+
+                id:
+                    "maintenance-type",
+
+                label:
+                    "Maintenance Type",
+
+                type:
+                    "select",
+
+                options: [
+
+                    "Track Repair",
+
+                    "Track Inspection",
+
+                    "Emergency Repair",
+
+                    "Equipment Repair",
+
+                    "Maintenance Block"
+
+                ]
+
+            },
+
+
+            {
+
+                id:
+                    "maintenance-duration",
+
+                label:
+                    "Block Duration (minutes)",
+
+                type:
+                    "number",
+
+                value:
+                    "30"
+
+            }
+
+        ]
+
+    },
+
+
+    /* =====================================
+       LEVEL CROSSING
+    ===================================== */
+
+    crossing: {
+
+        title:
+            "Level Crossing Gate Simulation",
+
+        description:
+            "Simulate operational delays caused by level crossings.",
+
+        fields: [
+
+            {
+
+                id:
+                    "sim-train",
+
+                label:
+                    "Train Number",
+
+                type:
+                    "text",
+
+                value:
+                    "12705"
+
+            },
+
+
+            {
+
+                id:
+                    "sim-section",
+
+                label:
+                    "Level Crossing Section",
+
+                type:
+                    "select",
+
+                options: [
+
+                    "Vijayawada → Madhira",
+
+                    "Madhira → Khammam",
+
+                    "Khammam → Dornakal",
+
+                    "Warangal → Kazipet"
+
+                ]
+
+            },
+
+
+            {
+
+                id:
+                    "crossing-status",
+
+                label:
+                    "Gate Condition",
+
+                type:
+                    "select",
+
+                options: [
+
+                    "Normal Operation",
+
+                    "Gate Opening Delay",
+
+                    "Gate Malfunction",
+
+                    "Road Traffic Congestion"
+
+                ]
+
+            },
+
+
+            {
+
+                id:
+                    "crossing-delay",
+
+                label:
+                    "Expected Crossing Delay (minutes)",
+
+                type:
+                    "number",
+
+                value:
+                    "10"
+
+            }
+
+        ]
+
+    },
+
+
+    /* =====================================
+       BOTTLENECK
+    ===================================== */
+
+    bottleneck: {
+
+        title:
+            "Operational Bottleneck Simulation",
+
+        description:
+            "Simulate railway junction congestion and capacity limitations.",
+
+        fields: [
+
+            {
+
+                id:
+                    "sim-train",
+
+                label:
+                    "Train Number",
+
+                type:
+                    "text",
+
+                value:
+                    "12705"
+
+            },
+
+
+            {
+
+                id:
+                    "junction",
+
+                label:
+                    "Affected Junction",
+
+                type:
+                    "select",
+
+                options: [
+
+                    "Vijayawada Junction",
+
+                    "Khammam Junction",
+
+                    "Warangal Junction",
+
+                    "Kazipet Junction"
+
+                ]
+
+            },
+
+
+            {
+
+                id:
+                    "capacity",
+
+                label:
+                    "Available Route Capacity (%)",
+
+                type:
+                    "number",
+
+                value:
+                    "60"
+
+            },
+
+
+            {
+
+                id:
+                    "queue-trains",
+
+                label:
+                    "Number of Trains Waiting",
+
+                type:
+                    "number",
+
+                value:
+                    "4"
+
+            }
+
+        ]
+
+    }
+
+};
 
 
 /* =========================================
    PAGE NAVIGATION
 ========================================= */
 
-const screens = [
-    "home",
-    "passenger",
-    "department",
-    "simulation",
-    "authorized-api"
-];
+function hideAllScreens() {
 
 
-function showScreen(screenId) {
+    const screens =
+        document.querySelectorAll(
+            ".screen"
+        );
 
-    screens.forEach((id) => {
 
-        const screen = $(id);
+    screens.forEach(
 
-        if (!screen) return;
+        screen => {
 
-        screen.classList.add("hide");
-
-    });
-
-
-    const selectedScreen = $(screenId);
-
-    if (selectedScreen) {
-
-        selectedScreen.classList.remove("hide");
-
-    }
-
-
-    window.scrollTo({
-
-        top: 0,
-
-        behavior: "smooth"
-
-    });
-
-}
-
-
-/* =========================================
-   HOME
-========================================= */
-
-function home() {
-
-    showScreen("home");
-
-}
-
-
-/* =========================================
-   PASSENGER
-========================================= */
-
-function passenger() {
-
-    showScreen("passenger");
-
-}
-
-
-/* =========================================
-   DEPARTMENT
-========================================= */
-
-function department() {
-
-    showScreen("department");
-
-}
-
-
-/* =========================================
-   SIMULATION
-========================================= */
-
-function simulation() {
-
-    showScreen("simulation");
-
-}
-
-
-/* =========================================
-   AUTHORIZED API
-========================================= */
-
-function authorizedAPI() {
-
-    showScreen("authorized-api");
-
-}
-
-
-/* =========================================
-   DEFAULT DATE
-========================================= */
-
-document.addEventListener("DOMContentLoaded", () => {
-
-    const dateInput = $("date");
-
-    if (dateInput) {
-
-        const today = new Date();
-
-        const formattedDate =
-            today.toISOString().split("T")[0];
-
-        dateInput.value = formattedDate;
-
-    }
-
-
-    setupTrainInput();
-
-});
-
-
-/* =========================================
-   TRAIN INPUT ENTER KEY
-========================================= */
-
-function setupTrainInput() {
-
-    const trainInput = $("train");
-
-    if (!trainInput) return;
-
-
-    trainInput.addEventListener(
-
-        "keydown",
-
-        (event) => {
-
-            if (event.key === "Enter") {
-
-                forecast();
-
-            }
+            screen.classList.add(
+                "hide"
+            );
 
         }
 
     );
 
+
+}
+
+
+function home() {
+
+
+    hideAllScreens();
+
+
+    document
+        .getElementById(
+            "home"
+        )
+        .classList
+        .remove(
+            "hide"
+        );
+
+
+    window.scrollTo({
+
+        top:
+            0,
+
+        behavior:
+            "smooth"
+
+    );
+
+
+}
+
+
+function passenger() {
+
+
+    hideAllScreens();
+
+
+    document
+        .getElementById(
+            "passenger"
+        )
+        .classList
+        .remove(
+            "hide"
+        );
+
+
+    window.scrollTo({
+
+        top:
+            0,
+
+        behavior:
+            "smooth"
+
+    );
+
+
+}
+
+
+function department() {
+
+
+    hideAllScreens();
+
+
+    document
+        .getElementById(
+            "department"
+        )
+        .classList
+        .remove(
+            "hide"
+        );
+
+
+    window.scrollTo({
+
+        top:
+            0,
+
+        behavior:
+            "smooth"
+
+    );
+
+
+}
+
+
+function simulation() {
+
+
+    hideAllScreens();
+
+
+    document
+        .getElementById(
+            "simulation"
+        )
+        .classList
+        .remove(
+            "hide"
+        );
+
+
+    window.scrollTo({
+
+        top:
+            0,
+
+        behavior:
+            "smooth"
+
+    );
+
+
+}
+
+
+function authorizedAPI() {
+
+
+    hideAllScreens();
+
+
+    document
+        .getElementById(
+            "authorized-api"
+        )
+        .classList
+        .remove(
+            "hide"
+        );
+
+
+    window.scrollTo({
+
+        top:
+            0,
+
+        behavior:
+            "smooth"
+
+    );
+
+
 }
 
 
 /* =========================================
-   TRAIN SEARCH
+   PASSENGER FORECAST
 ========================================= */
 
-async function forecast() {
+function forecast() {
 
-    const trainInput = $("train");
 
-    if (!trainInput) return;
+    const trainInput =
+        document.getElementById(
+            "train"
+        );
 
 
     const trainNumber =
-        trainInput.value.trim();
+        trainInput.value
+            .trim();
 
 
-    if (!trainNumber) {
-
-        showError(
-            "Please enter a train number or train name."
+    const error =
+        document.getElementById(
+            "err"
         );
+
+
+    const loading =
+        document.getElementById(
+            "loading"
+        );
+
+
+    const result =
+        document.getElementById(
+            "result"
+        );
+
+
+    /*
+    RESET ERROR
+    */
+
+    error.classList.add(
+        "hide"
+    );
+
+
+    error.textContent =
+        "";
+
+
+    /*
+    VALIDATE TRAIN
+    */
+
+    if (
+        trainNumber === ""
+    ) {
+
+
+        error.textContent =
+            "Please enter a train number.";
+
+
+        error.classList.remove(
+            "hide"
+        );
+
 
         return;
 
     }
 
 
-    hideError();
+    /*
+    SHOW LOADING
+    */
 
+    result.classList.add(
+        "hide"
+    );
 
-    const loading = $("loading");
 
-    const result = $("result");
+    loading.classList.remove(
+        "hide"
+    );
 
 
-    if (result) {
+    /*
+    SIMULATE DATA LOADING
+    */
 
-        result.classList.add("hide");
+    setTimeout(
 
-    }
+        () => {
 
-
-    if (loading) {
-
-        loading.classList.remove("hide");
-
-    }
-
-
-    try {
-
-        /*
-         =====================================
-         API CALL
-         =====================================
-
-         Your config.js can contain:
-
-         const API_BASE_URL =
-             "http://localhost:5000";
-
-         OR your deployed backend URL.
-
-         This code automatically tries
-         multiple possible API endpoints.
-        */
-
-
-        let response = null;
-
-        let data = null;
-
-
-        if (
-            typeof API_BASE_URL !==
-            "undefined"
-        ) {
-
-            const endpoints = [
-
-                `${API_BASE_URL}/forecast/${trainNumber}`,
-
-                `${API_BASE_URL}/api/forecast/${trainNumber}`,
-
-                `${API_BASE_URL}/forecast?train=${trainNumber}`
-
-            ];
-
-
-            for (
-                const endpoint of endpoints
-            ) {
-
-                try {
-
-                    const res =
-                        await fetch(endpoint);
-
-
-                    if (res.ok) {
-
-                        response = res;
-
-                        break;
-
-                    }
-
-                }
-
-                catch (error) {
-
-                    console.log(
-                        "Endpoint unavailable:",
-                        endpoint
-                    );
-
-                }
-
-            }
-
-
-            if (response) {
-
-                data =
-                    await response.json();
-
-            }
-
-        }
-
-
-        /*
-         =====================================
-         DEMO FALLBACK
-         =====================================
-
-         This allows your SIH prototype
-         to work even when backend/API
-         is unavailable.
-        */
-
-
-        if (!data) {
-
-            data =
-                createDemoForecast(
-                    trainNumber
-                );
-
-        }
-
-
-        renderForecast(data);
-
-
-    }
-
-    catch (error) {
-
-        console.error(error);
-
-
-        /*
-         Prototype fallback
-        */
-
-        const demoData =
-            createDemoForecast(
-                trainNumber
-            );
-
-
-        renderForecast(
-            demoData
-        );
-
-    }
-
-    finally {
-
-        if (loading) {
 
             loading.classList.add(
                 "hide"
             );
 
-        }
 
-    }
-
-}
-
-
-/* =========================================
-   DEMO FORECAST DATA
-========================================= */
-
-function createDemoForecast(
-    trainNumber
-) {
-
-    return {
-
-        train_number:
-            trainNumber || "12705",
+            result.classList.remove(
+                "hide"
+            );
 
 
-        train_name:
-            "Guntur–Secunderabad Intercity Express",
+            updateTrainStatus();
 
 
-        route:
-            "Guntur Junction → Secunderabad Junction",
+            updateJourney();
 
 
-        current_station:
-            "Khammam Junction",
+            renderForecastTimeline();
 
 
-        current_delay:
-            12,
+            renderImpacts();
 
 
-        next_station:
-            "Dornakal Junction",
+            renderAccuracyChart();
 
 
-        last_updated:
-            new Date().toLocaleTimeString(
-                [],
-                {
-                    hour:
-                        "2-digit",
-
-                    minute:
-                        "2-digit"
-
-                }
-            ),
+            updateSelectedTrain();
 
 
-        progress:
-            42,
+            result.scrollIntoView({
 
+                behavior:
+                    "smooth",
 
-        journey_from:
-            "Guntur Junction",
+                block:
+                    "start"
 
+            });
 
-        journey_to:
-            "Secunderabad Junction",
-
-
-        impacts: [
-
-            {
-
-                feature:
-                    "Congestion on Busy Routes",
-
-                section:
-                    "Khammam → Dornakal",
-
-                impact:
-                    5
-
-            },
-
-
-            {
-
-                feature:
-                    "Delays in Preceding Trains",
-
-                section:
-                    "Warangal → Kazipet",
-
-                impact:
-                    4
-
-            },
-
-
-            {
-
-                feature:
-                    "Temporary Speed Restriction",
-
-                section:
-                    "Bhongir → Charlapalli",
-
-                impact:
-                    3
-
-            }
-
-        ],
-
-
-        model_performance: {
-
-            baseline_mae:
-                5.74,
-
-            dynamic_mae:
-                3.48,
-
-            improvement:
-                39.36
 
         },
 
+        1200
 
-        stations: [
-
-            {
-
-                station:
-                    "Guntur Junction",
-
-                code:
-                    "GNT",
-
-                scheduled:
-                    "10:30 AM",
-
-                predicted:
-                    "10:35 AM",
-
-                delay:
-                    5,
-
-                status:
-                    "passed"
-
-            },
-
-
-            {
-
-                station:
-                    "Mangalagiri",
-
-                code:
-                    "MGL",
-
-                scheduled:
-                    "11:00 AM",
-
-                predicted:
-                    "11:07 AM",
-
-                delay:
-                    7,
-
-                status:
-                    "passed"
-
-            },
-
-
-            {
-
-                station:
-                    "Vijayawada Junction",
-
-                code:
-                    "BZA",
-
-                scheduled:
-                    "11:45 AM",
-
-                predicted:
-                    "11:55 AM",
-
-                delay:
-                    10,
-
-                status:
-                    "passed"
-
-            },
-
-
-            {
-
-                station:
-                    "Madhira",
-
-                code:
-                    "MDR",
-
-                scheduled:
-                    "12:40 PM",
-
-                predicted:
-                    "12:52 PM",
-
-                delay:
-                    12,
-
-                status:
-                    "passed"
-
-            },
-
-
-            {
-
-                station:
-                    "Khammam Junction",
-
-                code:
-                    "KMT",
-
-                scheduled:
-                    "1:30 PM",
-
-                predicted:
-                    "1:42 PM",
-
-                delay:
-                    12,
-
-                status:
-                    "current"
-
-            },
-
-
-            {
-
-                station:
-                    "Dornakal Junction",
-
-                code:
-                    "DKJ",
-
-                scheduled:
-                    "2:05 PM",
-
-                predicted:
-                    "2:19 PM",
-
-                delay:
-                    14,
-
-                status:
-                    "upcoming"
-
-            },
-
-
-            {
-
-                station:
-                    "Mahbubabad",
-
-                code:
-                    "MABD",
-
-                scheduled:
-                    "2:40 PM",
-
-                predicted:
-                    "2:56 PM",
-
-                delay:
-                    16,
-
-                status:
-                    "upcoming"
-
-            },
-
-
-            {
-
-                station:
-                    "Nekonda",
-
-                code:
-                    "NKD",
-
-                scheduled:
-                    "3:10 PM",
-
-                predicted:
-                    "3:27 PM",
-
-                delay:
-                    17,
-
-                status:
-                    "upcoming"
-
-            },
-
-
-            {
-
-                station:
-                    "Warangal Junction",
-
-                code:
-                    "WL",
-
-                scheduled:
-                    "3:50 PM",
-
-                predicted:
-                    "4:08 PM",
-
-                delay:
-                    18,
-
-                status:
-                    "upcoming"
-
-            },
-
-
-            {
-
-                station:
-                    "Kazipet Junction",
-
-                code:
-                    "KZJ",
-
-                scheduled:
-                    "4:30 PM",
-
-                predicted:
-                    "4:49 PM",
-
-                delay:
-                    19,
-
-                status:
-                    "upcoming"
-
-            },
-
-
-            {
-
-                station:
-                    "Jangaon",
-
-                code:
-                    "ZN",
-
-                scheduled:
-                    "5:15 PM",
-
-                predicted:
-                    "5:35 PM",
-
-                delay:
-                    20,
-
-                status:
-                    "upcoming"
-
-            },
-
-
-            {
-
-                station:
-                    "Aler",
-
-                code:
-                    "ALER",
-
-                scheduled:
-                    "5:50 PM",
-
-                predicted:
-                    "6:12 PM",
-
-                delay:
-                    22,
-
-                status:
-                    "upcoming"
-
-            },
-
-
-            {
-
-                station:
-                    "Bhongir",
-
-                code:
-                    "BG",
-
-                scheduled:
-                    "6:20 PM",
-
-                predicted:
-                    "6:44 PM",
-
-                delay:
-                    24,
-
-                status:
-                    "upcoming"
-
-            },
-
-
-            {
-
-                station:
-                    "Charlapalli",
-
-                code:
-                    "CHZ",
-
-                scheduled:
-                    "6:45 PM",
-
-                predicted:
-                    "7:10 PM",
-
-                delay:
-                    25,
-
-                status:
-                    "upcoming"
-
-            },
-
-
-            {
-
-                station:
-                    "Secunderabad Junction",
-
-                code:
-                    "SC",
-
-                scheduled:
-                    "7:10 PM",
-
-                predicted:
-                    "7:36 PM",
-
-                delay:
-                    26,
-
-                status:
-                    "destination"
-
-            }
-
-        ]
-
-    };
-
-}
-
-
-/* =========================================
-   RENDER COMPLETE FORECAST
-========================================= */
-
-function renderForecast(data) {
-
-    const result = $("result");
-
-
-    if (result) {
-
-        result.classList.remove(
-            "hide"
-        );
-
-    }
-
-
-    renderTrainOverview(data);
-
-    renderMetrics(data);
-
-    renderJourney(data);
-
-    renderImpacts(data);
-
-    renderAccuracyChart(data);
-
-    renderTimeline(data);
-
-    updateSelectedTrainPosition(
-        data
     );
 
-}
-
-
-/* =========================================
-   TRAIN OVERVIEW
-========================================= */
-
-function renderTrainOverview(data) {
-
-    if ($("title")) {
-
-        $("title").textContent =
-            `Train ${data.train_number} • ${data.train_name}`;
-
-    }
-
-
-    if ($("route")) {
-
-        $("route").textContent =
-            data.route;
-
-    }
 
 }
 
 
 /* =========================================
-   METRICS
+   UPDATE TRAIN STATUS
 ========================================= */
 
-function renderMetrics(data) {
-
-    if ($("cur")) {
-
-        $("cur").textContent =
-            data.current_station ||
-            "—";
-
-    }
+function updateTrainStatus() {
 
 
-    if ($("delay")) {
+    document.getElementById(
+        "title"
+    ).textContent =
 
-        const delay =
-            Number(data.current_delay || 0);
-
-
-        $("delay").textContent =
-            delay === 0
-                ? "On Time"
-                : `+${delay} min`;
-
-    }
+        `Train ${trainData.number} • ${trainData.name}`;
 
 
-    if ($("next")) {
+    document.getElementById(
+        "route"
+    ).textContent =
 
-        $("next").textContent =
-            data.next_station ||
-            "—";
-
-    }
+        trainData.route;
 
 
-    if ($("updated")) {
+    document.getElementById(
+        "cur"
+    ).textContent =
 
-        $("updated").textContent =
-            data.last_updated ||
-            "—";
+        trainData.currentStation;
 
-    }
+
+    document.getElementById(
+        "delay"
+    ).textContent =
+
+        `+${trainData.currentDelay} min`;
+
+
+    document.getElementById(
+        "next"
+    ).textContent =
+
+        trainData.nextStation;
+
+
+    document.getElementById(
+        "updated"
+    ).textContent =
+
+        trainData.updated;
+
 
 }
 
@@ -946,130 +1490,81 @@ function renderMetrics(data) {
    JOURNEY PROGRESS
 ========================================= */
 
-function renderJourney(data) {
-
-    let progress =
-        Number(data.progress);
+function updateJourney() {
 
 
-    if (
-        Number.isNaN(progress)
-    ) {
-
-        progress = 0;
-
-    }
+    const progress =
+        trainData.progress;
 
 
-    progress =
-        Math.max(
-            0,
-            Math.min(
-                progress,
-                100
-            )
-        );
+    document.getElementById(
+        "journey-percent"
+    ).textContent =
+
+        `${progress}%`;
 
 
-    if ($("journey-percent")) {
+    document.getElementById(
+        "journey-from"
+    ).textContent =
 
-        $("journey-percent").textContent =
-            `${Math.round(progress)}%`;
-
-    }
-
-
-    if ($("journey-from")) {
-
-        $("journey-from").textContent =
-            data.journey_from ||
-            "Source";
-
-    }
+        trainData.from;
 
 
-    if ($("journey-to")) {
+    document.getElementById(
+        "journey-to"
+    ).textContent =
 
-        $("journey-to").textContent =
-            data.journey_to ||
-            "Destination";
-
-    }
+        trainData.to;
 
 
-    if ($("journey-progress")) {
+    document.getElementById(
+        "journey-progress"
+    ).style.width =
 
-        $("journey-progress").style.width =
-            `${progress}%`;
-
-    }
-
-
-    if ($("progress-marker")) {
-
-        $("progress-marker").style.left =
-            `${progress}%`;
-
-    }
+        `${progress}%`;
 
 
-    if ($("journey-status")) {
+    document.getElementById(
+        "progress-marker"
+    ).style.left =
 
-        $("journey-status").textContent =
+        `${progress}%`;
 
-            progress >= 100
 
-                ? "Journey completed."
+    document.getElementById(
+        "journey-status"
+    ).textContent =
 
-                : `${Math.round(progress)}% of the journey completed. Live train movement is being monitored.`;
+        `Your train is currently near ${trainData.currentStation}. ${progress}% of the journey has been completed.`;
 
-    }
 
 }
 
 
 /* =========================================
-   LIVE RAILWAY NETWORK
-   YOUR TRAIN POSITION
+   UPDATE SELECTED NETWORK TRAIN
 ========================================= */
 
-function updateSelectedTrainPosition(
-    data
-) {
+function updateSelectedTrain() {
+
 
     const selectedTrain =
-        $("selected-network-train");
-
-
-    if (!selectedTrain) return;
-
-
-    const progress =
-        Number(data.progress || 0);
-
-
-    /*
-     The selected train visually moves
-     based on overall journey progress.
-    */
-
-
-    let position =
-        Math.max(
-            5,
-            Math.min(
-                progress,
-                95
-            )
+        document.getElementById(
+            "selected-network-train"
         );
 
 
-    selectedTrain.style.left =
-        `${position}%`;
+    if (
+        selectedTrain
+    ) {
 
 
-    selectedTrain.style.transition =
-        "left 1.5s ease";
+        selectedTrain.style.display =
+            "block";
+
+    }
+
 
 }
 
@@ -1078,30 +1573,173 @@ function updateSelectedTrainPosition(
    ACTIVE DELAY IMPACTS
 ========================================= */
 
-function renderImpacts(data) {
-
-    const impacts =
-        data.impacts || [];
+function renderImpacts() {
 
 
     const impactSection =
-        $("impact-section");
-
-
-    if (!impactSection) return;
-
-
-    if (
-        impacts.length === 0
-    ) {
-
-        impactSection.classList.add(
-            "hide"
+        document.getElementById(
+            "impact-section"
         );
 
-        return;
 
-    }
+    const totalImpact =
+        document.getElementById(
+            "total-impact"
+        );
+
+
+    const summary =
+        document.getElementById(
+            "impact-summary"
+        );
+
+
+    const events =
+        document.getElementById(
+            "active-events"
+        );
+
+
+    const impactData = [
+
+        {
+
+            feature:
+                "Route Congestion",
+
+            section:
+                "Khammam → Dornakal",
+
+            impact:
+                7
+
+        },
+
+
+        {
+
+            feature:
+                "Historical Delay Pattern",
+
+            section:
+                "Warangal → Kazipet",
+
+            impact:
+                5
+
+        }
+
+    ];
+
+
+    const total =
+        impactData.reduce(
+
+            (
+                sum,
+                item
+            ) =>
+
+                sum +
+                item.impact,
+
+            0
+
+        );
+
+
+    totalImpact.textContent =
+        `+${total} min`;
+
+
+    summary.innerHTML =
+        `
+
+        <div class="impact-summary-item">
+
+            <small>
+                ACTIVE DISRUPTIONS
+            </small>
+
+            <b>
+                ${impactData.length}
+            </b>
+
+        </div>
+
+
+        <div class="impact-summary-item">
+
+            <small>
+                ESTIMATED IMPACT
+            </small>
+
+            <b>
+                +${total} min
+            </b>
+
+        </div>
+
+        `;
+
+
+    events.innerHTML =
+        "";
+
+
+    impactData.forEach(
+
+        item => {
+
+
+            const element =
+                document.createElement(
+                    "div"
+                );
+
+
+            element.className =
+                "event-item";
+
+
+            element.innerHTML =
+                `
+
+                <div>
+
+                    <div class="event-feature">
+
+                        ${item.feature}
+
+                    </div>
+
+
+                    <span class="event-section">
+
+                        ${item.section}
+
+                    </span>
+
+                </div>
+
+
+                <div class="event-impact">
+
+                    +${item.impact} min
+
+                </div>
+
+                `;
+
+
+            events.appendChild(
+                element
+            );
+
+
+        }
+
+    );
 
 
     impactSection.classList.remove(
@@ -1109,171 +1747,238 @@ function renderImpacts(data) {
     );
 
 
-    const totalImpact =
-        impacts.reduce(
+}
 
-            (
-                total,
-                item
-            ) =>
 
-                total +
-                Number(
-                    item.impact || 0
-                ),
+/* =========================================
+   FORECAST TIMELINE
+========================================= */
 
-            0
+function renderForecastTimeline() {
 
+
+    const timeline =
+        document.getElementById(
+            "timeline"
         );
 
 
-    if ($("total-impact")) {
-
-        $("total-impact").textContent =
-            `+${totalImpact} min`;
-
-    }
+    timeline.innerHTML =
+        "";
 
 
-    const summary =
-        $("impact-summary");
+    stationForecast.forEach(
+
+        station => {
 
 
-    if (summary) {
-
-        summary.innerHTML =
-
-            `
-            <div class="impact-summary-item">
-
-                <small>
-                    ACTIVE DISRUPTIONS
-                </small>
-
-                <b>
-                    ${impacts.length}
-                </b>
-
-            </div>
+            let delayClass =
+                "delay-good";
 
 
-            <div class="impact-summary-item">
-
-                <small>
-                    TOTAL ESTIMATED IMPACT
-                </small>
-
-                <b>
-                    +${totalImpact} min
-                </b>
-
-            </div>
-            `;
-
-    }
+            if (
+                station.delay >=
+                10
+            ) {
 
 
-    const events =
-        $("active-events");
+                delayClass =
+                    "delay-mid";
+
+            }
 
 
-    if (events) {
-
-        events.innerHTML =
-            "";
-
-
-        impacts.forEach(
-            (item) => {
-
-                const event =
-                    document.createElement(
-                        "div"
-                    );
+            if (
+                station.delay >=
+                20
+            ) {
 
 
-                event.className =
-                    "event-item";
+                delayClass =
+                    "delay-bad";
+
+            }
 
 
-                event.innerHTML =
-
-                    `
-                    <div>
-
-                        <div class="event-feature">
-
-                            ${item.feature}
-
-                        </div>
+            let statusClass =
+                "status-good";
 
 
-                        <span class="event-section">
-
-                            ${item.section}
-
-                        </span>
-
-                    </div>
+            if (
+                station.status ===
+                "Current"
+            ) {
 
 
-                    <div class="event-impact">
+                statusClass =
+                    "status-mid";
 
-                        +${item.impact} min
-
-                    </div>
-                    `;
+            }
 
 
-                events.appendChild(
-                    event
+            if (
+                station.status ===
+                "Upcoming"
+            ) {
+
+
+                statusClass =
+                    "status-mid";
+
+            }
+
+
+            if (
+                station.status ===
+                "Destination"
+            ) {
+
+
+                statusClass =
+                    "status-good";
+
+            }
+
+
+            const row =
+                document.createElement(
+                    "div"
+                );
+
+
+            row.className =
+                "forecast-row";
+
+
+            if (
+                station.status ===
+                "Current"
+            ) {
+
+
+                row.classList.add(
+                    "current-station-row"
                 );
 
             }
-        );
 
-    }
+
+            row.innerHTML =
+                `
+
+                <div class="timeline-dot">
+
+                    ●
+
+                </div>
+
+
+                <div>
+
+                    <div class="station-name">
+
+                        ${station.station}
+
+                    </div>
+
+
+                    <div class="station-code">
+
+                        ${station.code}
+
+                    </div>
+
+                </div>
+
+
+                <div>
+
+                    <div class="time-value">
+
+                        ${station.predicted}
+
+                    </div>
+
+
+                    <div class="time-label">
+
+                        Scheduled:
+                        ${station.scheduled}
+
+                    </div>
+
+                </div>
+
+
+                <div class="delay-column">
+
+                    <div class="${delayClass}">
+
+                        +${station.delay} min
+
+                    </div>
+
+
+                    <div class="confidence">
+
+                        AI Prediction
+
+                    </div>
+
+                </div>
+
+
+                <div class="status-badge ${statusClass}">
+
+                    ${station.status}
+
+                </div>
+
+                `;
+
+
+            timeline.appendChild(
+                row
+            );
+
+
+        }
+
+    );
+
 
 }
 
 
 /* =========================================
-   ETA ACCURACY CHART
+   ACCURACY CHART
 ========================================= */
 
-let accuracyChart = null;
+function renderAccuracyChart() {
 
-
-function renderAccuracyChart(data) {
 
     const canvas =
-        $("accuracyChart");
-
-
-    if (!canvas) return;
-
-
-    const performance =
-        data.model_performance || {};
-
-
-    const baseline =
-        Number(
-            performance.baseline_mae ||
-            5.74
+        document.getElementById(
+            "accuracyChart"
         );
 
 
-    const dynamic =
-        Number(
-            performance.dynamic_mae ||
-            3.48
-        );
+    if (
+        !canvas
+    ) {
+
+        return;
+
+    }
 
 
-    if (accuracyChart) {
+    if (
+        accuracyChart
+    ) {
+
 
         accuracyChart.destroy();
+
 
     }
 
@@ -1295,7 +2000,7 @@ function renderAccuracyChart(data) {
 
                         "Baseline ETA",
 
-                        "RailForecast AI"
+                        "Dynamic AI ETA"
 
                     ],
 
@@ -1307,12 +2012,29 @@ function renderAccuracyChart(data) {
                             label:
                                 "Mean Absolute Error (Minutes)",
 
-
                             data: [
 
-                                baseline,
+                                5.74,
 
-                                dynamic
+                                3.48
+
+                            ],
+
+
+                            backgroundColor: [
+
+                                "rgba(242,184,75,0.7)",
+
+                                "rgba(79,124,255,0.8)"
+
+                            ],
+
+
+                            borderColor: [
+
+                                "#f2b84b",
+
+                                "#4f7cff"
 
                             ],
 
@@ -1353,14 +2075,8 @@ function renderAccuracyChart(data) {
 
                         tooltip: {
 
-                            callbacks: {
-
-                                label:
-                                    (context) =>
-
-                                        `${context.raw} minutes MAE`
-
-                            }
+                            backgroundColor:
+                                "#101d2e"
 
                         }
 
@@ -1374,7 +2090,7 @@ function renderAccuracyChart(data) {
                             ticks: {
 
                                 color:
-                                    "#c8d3e2"
+                                    "#c8d0dd"
 
                             },
 
@@ -1406,7 +2122,7 @@ function renderAccuracyChart(data) {
                             grid: {
 
                                 color:
-                                    "rgba(255,255,255,0.06)"
+                                    "rgba(255,255,255,0.05)"
 
                             }
 
@@ -1420,407 +2136,8 @@ function renderAccuracyChart(data) {
 
         );
 
-}
-
-
-/* =========================================
-   FUTURE ETA TIMELINE
-========================================= */
-
-function renderTimeline(data) {
-
-    const timeline =
-        $("timeline");
-
-
-    if (!timeline) return;
-
-
-    timeline.innerHTML =
-        "";
-
-
-    const stations =
-        data.stations || [];
-
-
-    stations.forEach(
-        (
-            station,
-            index
-        ) => {
-
-            const row =
-                document.createElement(
-                    "div"
-                );
-
-
-            row.className =
-                "forecast-row";
-
-
-            const delay =
-                Number(
-                    station.delay || 0
-                );
-
-
-            let delayClass =
-                "delay-good";
-
-
-            if (delay > 10) {
-
-                delayClass =
-                    "delay-mid";
-
-            }
-
-
-            if (delay > 20) {
-
-                delayClass =
-                    "delay-bad";
-
-            }
-
-
-            let statusClass =
-                "status-good";
-
-
-            let statusText =
-                station.status ||
-                "Upcoming";
-
-
-            if (
-                station.status ===
-                "current"
-            ) {
-
-                statusClass =
-                    "status-mid";
-
-                statusText =
-                    "CURRENT";
-
-            }
-
-
-            if (
-                station.status ===
-                "upcoming"
-            ) {
-
-                statusClass =
-                    "status-mid";
-
-                statusText =
-                    "UPCOMING";
-
-            }
-
-
-            if (
-                station.status ===
-                "destination"
-            ) {
-
-                statusClass =
-                    "status-good";
-
-                statusText =
-                    "DESTINATION";
-
-            }
-
-
-            if (
-                station.status ===
-                "passed"
-            ) {
-
-                statusText =
-                    "PASSED";
-
-            }
-
-
-            row.innerHTML =
-
-                `
-                <div class="timeline-dot">
-
-                    ${getTimelineIcon(
-                        station.status
-                    )}
-
-                </div>
-
-
-                <div>
-
-                    <div class="station-name">
-
-                        ${station.station}
-
-                    </div>
-
-
-                    <div class="station-code">
-
-                        ${station.code || ""}
-
-                    </div>
-
-                </div>
-
-
-                <div>
-
-                    <div class="time-value">
-
-                        ${station.predicted}
-
-                    </div>
-
-
-                    <div class="time-label">
-
-                        Scheduled:
-                        ${station.scheduled}
-
-                    </div>
-
-                </div>
-
-
-                <div
-                    class="
-                        delay-column
-                        ${delayClass}
-                    "
-                >
-
-                    +${delay} min
-
-                </div>
-
-
-                <div
-                    class="
-                        status-badge
-                        ${statusClass}
-                    "
-                >
-
-                    ${statusText}
-
-                </div>
-                `;
-
-
-            timeline.appendChild(
-                row
-            );
-
-        }
-    );
 
 }
-
-
-/* =========================================
-   TIMELINE ICON
-========================================= */
-
-function getTimelineIcon(
-    status
-) {
-
-    if (status === "passed") {
-
-        return "✓";
-
-    }
-
-
-    if (status === "current") {
-
-        return "🚆";
-
-    }
-
-
-    if (
-        status ===
-        "destination"
-    ) {
-
-        return "🏁";
-
-    }
-
-
-    return "○";
-
-}
-
-
-/* =========================================
-   ERROR HANDLING
-========================================= */
-
-function showError(message) {
-
-    const error =
-        $("err");
-
-
-    if (!error) return;
-
-
-    error.textContent =
-        message;
-
-
-    error.classList.remove(
-        "hide"
-    );
-
-}
-
-
-function hideError() {
-
-    const error =
-        $("err");
-
-
-    if (!error) return;
-
-
-    error.classList.add(
-        "hide"
-    );
-
-}
-
-
-/* =========================================
-   SIMULATION DATA
-========================================= */
-
-const simulationData = {
-
-    signal: {
-
-        title:
-            "Signal Points",
-
-        description:
-            "Simulate signal malfunction or signal clearance delays affecting train movement.",
-
-        baseImpact:
-            12
-
-    },
-
-
-    congestion: {
-
-        title:
-            "Congestion on Busy Routes",
-
-        description:
-            "Simulate increased train density and route congestion.",
-
-        baseImpact:
-            10
-
-    },
-
-
-    preceding: {
-
-        title:
-            "Delays in Preceding Trains",
-
-        description:
-            "Analyze delay propagation caused by preceding trains.",
-
-        baseImpact:
-            8
-
-    },
-
-
-    speed: {
-
-        title:
-            "Temporary Speed Restrictions",
-
-        description:
-            "Simulate speed restrictions affecting section running time.",
-
-        baseImpact:
-            9
-
-    },
-
-
-    maintenance: {
-
-        title:
-            "Unscheduled Maintenance Blocks",
-
-        description:
-            "Simulate emergency maintenance or temporary section closure.",
-
-        baseImpact:
-            18
-
-    },
-
-
-    crossing: {
-
-        title:
-            "Level Crossing Gates",
-
-        description:
-            "Simulate delays caused by level crossing operations.",
-
-        baseImpact:
-            6
-
-    },
-
-
-    bottleneck: {
-
-        title:
-            "Operational Bottlenecks",
-
-        description:
-            "Simulate capacity restrictions and junction congestion.",
-
-        baseImpact:
-            11
-
-    }
-
-};
-
-
-/* =========================================
-   CURRENT SIMULATION
-========================================= */
-
-let currentSimulation =
-    null;
 
 
 /* =========================================
@@ -1829,49 +2146,225 @@ let currentSimulation =
 
 function openSimulation(type) {
 
+
     currentSimulation =
         type;
 
 
-    const simulation =
-        simulationData[type];
+    const feature =
+        simulationFeatures[type];
 
 
-    if (!simulation) return;
+    if (
+        !feature
+    ) {
+
+        return;
+
+    }
 
 
     const config =
-        $("simulation-config");
-
-
-    if (config) {
-
-        config.classList.remove(
-            "hide"
+        document.getElementById(
+            "simulation-config"
         );
 
-    }
 
-
-    if ($("simulation-title")) {
-
-        $("simulation-title").textContent =
-            simulation.title;
-
-    }
-
-
-    if ($("simulation-result")) {
-
-        $("simulation-result").classList.add(
-            "hide"
+    const title =
+        document.getElementById(
+            "simulation-title"
         );
 
-    }
 
+    const formContainer =
+        config.querySelector(
+            ".simulation-form-grid"
+        );
+
+
+    const result =
+        document.getElementById(
+            "simulation-result"
+        );
+
+
+    /*
+    UPDATE TITLE
+    */
+
+    title.textContent =
+        feature.title;
+
+
+    /*
+    CLEAR OLD INPUTS
+    */
+
+    formContainer.innerHTML =
+        "";
+
+
+    /*
+    HIDE OLD RESULT
+    */
+
+    result.classList.add(
+        "hide"
+    );
+
+
+    result.innerHTML =
+        "";
+
+
+    /*
+    CREATE NEW FEATURE INPUTS
+    */
+
+    feature.fields.forEach(
+
+        field => {
+
+
+            const wrapper =
+                document.createElement(
+                    "div"
+                );
+
+
+            const label =
+                document.createElement(
+                    "label"
+                );
+
+
+            label.textContent =
+                field.label;
+
+
+            wrapper.appendChild(
+                label
+            );
+
+
+            let input;
+
+
+            /*
+            SELECT
+            */
+
+            if (
+                field.type ===
+                "select"
+            ) {
+
+
+                input =
+                    document.createElement(
+                        "select"
+                    );
+
+
+                field.options.forEach(
+
+                    optionValue => {
+
+
+                        const option =
+                            document.createElement(
+                                "option"
+                            );
+
+
+                        option.value =
+                            optionValue;
+
+
+                        option.textContent =
+                            optionValue;
+
+
+                        input.appendChild(
+                            option
+                        );
+
+
+                    }
+
+                );
+
+            }
+
+
+            /*
+            NORMAL INPUT
+            */
+
+            else {
+
+
+                input =
+                    document.createElement(
+                        "input"
+                    );
+
+
+                input.type =
+                    field.type;
+
+
+                if (
+                    field.value !==
+                    undefined
+                ) {
+
+
+                    input.value =
+                        field.value;
+
+                }
+
+
+            }
+
+
+            input.id =
+                field.id;
+
+
+            wrapper.appendChild(
+                input
+            );
+
+
+            formContainer.appendChild(
+                wrapper
+            );
+
+
+        }
+
+    );
+
+
+    /*
+    SHOW CONFIGURATION
+    */
+
+    config.classList.remove(
+        "hide"
+    );
+
+
+    /*
+    SCROLL TO FORM
+    */
 
     setTimeout(
+
         () => {
+
 
             config.scrollIntoView({
 
@@ -1883,34 +2376,13 @@ function openSimulation(type) {
 
             });
 
+
         },
+
         100
+
     );
 
-}
-
-
-/* =========================================
-   CLOSE SIMULATION
-========================================= */
-
-function closeSimulation() {
-
-    const config =
-        $("simulation-config");
-
-
-    if (config) {
-
-        config.classList.add(
-            "hide"
-        );
-
-    }
-
-
-    currentSimulation =
-        null;
 
 }
 
@@ -1921,141 +2393,573 @@ function closeSimulation() {
 
 function runSimulation() {
 
+
     if (
         !currentSimulation
     ) {
+
 
         return;
 
     }
 
 
-    const simulation =
-        simulationData[
+    const feature =
+        simulationFeatures[
             currentSimulation
         ];
 
 
-    const train =
-        $("sim-train")?.value ||
-        "12705";
+    const result =
+        document.getElementById(
+            "simulation-result"
+        );
 
 
-    const section =
-        $("sim-section")?.value ||
-        "Selected Section";
+    let impact =
+        0;
 
 
-    const severity =
-        $("sim-severity")?.value ||
-        "medium";
+    let explanation =
+        "";
 
 
-    const duration =
-        Number(
-            $("sim-duration")?.value
-        ) || 30;
+    let affectedSection =
+        "";
 
 
-    let severityMultiplier =
-        1;
-
+    /*
+    =====================================
+    SIGNAL SIMULATION
+    =====================================
+    */
 
     if (
-        severity === "low"
+        currentSimulation ===
+        "signal"
     ) {
 
-        severityMultiplier =
-            0.6;
+
+        const delay =
+            Number(
+
+                document.getElementById(
+                    "signal-delay"
+                ).value
+
+            );
+
+
+        const condition =
+            document.getElementById(
+                "signal-status"
+            ).value;
+
+
+        affectedSection =
+            document.getElementById(
+                "sim-section"
+            ).value;
+
+
+        impact =
+            delay;
+
+
+        if (
+            condition ===
+            "Signal Failure"
+        ) {
+
+
+            impact =
+                Math.round(
+                    delay * 1.3
+                );
+
+        }
+
+
+        explanation =
+            `${condition} is affecting train movement in the selected railway section.`;
+
 
     }
 
 
-    if (
-        severity === "medium"
+    /*
+    =====================================
+    CONGESTION SIMULATION
+    =====================================
+    */
+
+    else if (
+        currentSimulation ===
+        "congestion"
     ) {
 
-        severityMultiplier =
+
+        const traffic =
+            document.getElementById(
+                "traffic-level"
+            ).value;
+
+
+        const trains =
+            Number(
+
+                document.getElementById(
+                    "trains-count"
+                ).value
+
+            );
+
+
+        affectedSection =
+            document.getElementById(
+                "sim-section"
+            ).value;
+
+
+        let trafficImpact =
+            10;
+
+
+        if (
+            traffic ===
+            "High"
+        ) {
+
+
+            trafficImpact =
+                20;
+
+        }
+
+
+        if (
+            traffic ===
+            "Severe"
+        ) {
+
+
+            trafficImpact =
+                35;
+
+        }
+
+
+        impact =
+            trafficImpact +
+            trains * 3;
+
+
+        explanation =
+            `${trains} trains ahead are causing ${traffic.toLowerCase()} railway congestion.`;
+
+
+    }
+
+
+    /*
+    =====================================
+    PRECEDING TRAIN SIMULATION
+    =====================================
+    */
+
+    else if (
+        currentSimulation ===
+        "preceding"
+    ) {
+
+
+        const precedingTrain =
+            document.getElementById(
+                "preceding-train"
+            ).value;
+
+
+        const precedingDelay =
+            Number(
+
+                document.getElementById(
+                    "preceding-delay"
+                ).value
+
+            );
+
+
+        affectedSection =
+            document.getElementById(
+                "sim-section"
+            ).value;
+
+
+        /*
+        DELAY PROPAGATION
+        */
+
+        impact =
+            Math.round(
+
+                precedingDelay *
+                0.65
+
+            );
+
+
+        explanation =
+            `Delay propagation from Train ${precedingTrain} is reducing route availability for your train.`;
+
+
+    }
+
+
+    /*
+    =====================================
+    SPEED RESTRICTION SIMULATION
+    =====================================
+    */
+
+    else if (
+        currentSimulation ===
+        "speed"
+    ) {
+
+
+        const normalSpeed =
+            Number(
+
+                document.getElementById(
+                    "normal-speed"
+                ).value
+
+            );
+
+
+        const restrictedSpeed =
+            Number(
+
+                document.getElementById(
+                    "restricted-speed"
+                ).value
+
+            );
+
+
+        const distance =
+            Number(
+
+                document.getElementById(
+                    "restriction-distance"
+                ).value
+
+            );
+
+
+        affectedSection =
+            document.getElementById(
+                "sim-section"
+            ).value;
+
+
+        if (
+            restrictedSpeed <=
+            0
+        ) {
+
+
+            alert(
+                "Restricted speed must be greater than zero."
+            );
+
+
+            return;
+
+        }
+
+
+        const normalTime =
+            (
+                distance /
+                normalSpeed
+            )
+            *
+            60;
+
+
+        const restrictedTime =
+            (
+                distance /
+                restrictedSpeed
+            )
+            *
+            60;
+
+
+        impact =
+            Math.round(
+
+                restrictedTime -
+                normalTime
+
+            );
+
+
+        explanation =
+            `Speed reduced from ${normalSpeed} km/h to ${restrictedSpeed} km/h over ${distance} km.`;
+
+
+    }
+
+
+    /*
+    =====================================
+    MAINTENANCE SIMULATION
+    =====================================
+    */
+
+    else if (
+        currentSimulation ===
+        "maintenance"
+    ) {
+
+
+        const duration =
+            Number(
+
+                document.getElementById(
+                    "maintenance-duration"
+                ).value
+
+            );
+
+
+        const maintenanceType =
+            document.getElementById(
+                "maintenance-type"
+            ).value;
+
+
+        affectedSection =
+            document.getElementById(
+                "sim-section"
+            ).value;
+
+
+        /*
+        MAINTENANCE IMPACT
+        */
+
+        impact =
+            Math.round(
+
+                duration *
+                0.8
+
+            );
+
+
+        if (
+            maintenanceType ===
+            "Emergency Repair"
+        ) {
+
+
+            impact =
+                Math.round(
+
+                    duration *
+                    1.1
+
+                );
+
+        }
+
+
+        explanation =
+            `${maintenanceType} is temporarily reducing railway section availability.`;
+
+
+    }
+
+
+    /*
+    =====================================
+    LEVEL CROSSING SIMULATION
+    =====================================
+    */
+
+    else if (
+        currentSimulation ===
+        "crossing"
+    ) {
+
+
+        const crossingDelay =
+            Number(
+
+                document.getElementById(
+                    "crossing-delay"
+                ).value
+
+            );
+
+
+        const status =
+            document.getElementById(
+                "crossing-status"
+            ).value;
+
+
+        affectedSection =
+            document.getElementById(
+                "sim-section"
+            ).value;
+
+
+        let multiplier =
             1;
 
+
+        if (
+            status ===
+            "Gate Malfunction"
+        ) {
+
+
+            multiplier =
+                1.5;
+
+        }
+
+
+        if (
+            status ===
+            "Road Traffic Congestion"
+        ) {
+
+
+            multiplier =
+                1.3;
+
+        }
+
+
+        impact =
+            Math.round(
+
+                crossingDelay *
+                multiplier
+
+            );
+
+
+        explanation =
+            `${status} is increasing operational waiting time at the level crossing.`;
+
+
     }
 
 
-    if (
-        severity === "high"
+    /*
+    =====================================
+    BOTTLENECK SIMULATION
+    =====================================
+    */
+
+    else if (
+        currentSimulation ===
+        "bottleneck"
     ) {
 
-        severityMultiplier =
-            1.6;
+
+        const capacity =
+            Number(
+
+                document.getElementById(
+                    "capacity"
+                ).value
+
+            );
+
+
+        const trains =
+            Number(
+
+                document.getElementById(
+                    "queue-trains"
+                ).value
+
+            );
+
+
+        affectedSection =
+            document.getElementById(
+                "junction"
+            ).value;
+
+
+        const capacityImpact =
+            (
+                100 -
+                capacity
+            )
+            *
+            0.5;
+
+
+        const trainImpact =
+            trains *
+            4;
+
+
+        impact =
+            Math.round(
+
+                capacityImpact +
+                trainImpact
+
+            );
+
+
+        explanation =
+            `Route capacity at ${affectedSection} is reduced to ${capacity}% with ${trains} trains waiting.`;
+
 
     }
 
 
     /*
-     =====================================
-     SIMULATION IMPACT
-
-     Impact uses:
-
-     Feature Base Impact
-     × Severity
-     × Duration Factor
-     =====================================
+    PREVENT NEGATIVE DELAY
     */
 
-
-    const durationFactor =
-        Math.max(
-            0.5,
-            duration / 30
-        );
-
-
-    const impact =
-        Math.round(
-
-            simulation.baseImpact *
-            severityMultiplier *
-            durationFactor
-
-        );
-
-
-    /*
-     Historical recovery assumption.
-    */
-
-
-    const recoveryRate =
-        0.35;
-
-
-    const recoverableDelay =
-        Math.round(
-
-            impact *
-            recoveryRate
-
-        );
-
-
-    const finalImpact =
+    impact =
         Math.max(
 
             0,
 
-            impact -
-            recoverableDelay
+            impact
 
         );
 
 
-    const result =
-        $("simulation-result");
+    /*
+    CALCULATE UPDATED ETA
+    */
+
+    const currentDelay =
+        trainData.currentDelay;
 
 
-    if (!result) return;
+    const updatedDelay =
+        currentDelay +
+        impact;
 
+
+    /*
+    SHOW RESULT
+    */
 
     result.classList.remove(
         "hide"
@@ -2063,90 +2967,51 @@ function runSimulation() {
 
 
     result.innerHTML =
-
         `
+
         <div class="simulation-result-header">
 
-            <div>
+            <span class="section-label">
 
-                <span class="section-label">
+                SIMULATION RESULT
 
-                    SIMULATION RESULT
-
-                </span>
+            </span>
 
 
-                <h2>
+            <h2>
 
-                    ${simulation.title}
+                ${feature.title}
 
-                </h2>
-
-            </div>
-
-
-            <div class="simulation-impact-value">
-
-                +${finalImpact} min
-
-            </div>
+            </h2>
 
         </div>
 
 
-        <div class="simulation-result-grid">
+
+        <div class="simulation-impact-result">
 
 
-            <div>
+            <div class="impact-value">
 
-                <small>
-                    TRAIN
-                </small>
-
-                <b>
-                    ${train}
-                </b>
+                +${impact} min
 
             </div>
 
 
             <div>
 
-                <small>
-                    AFFECTED SECTION
-                </small>
-
-                <b>
-                    ${section}
-                </b>
-
-            </div>
-
-
-            <div>
-
-                <small>
-                    SEVERITY
-                </small>
-
                 <b>
 
-                    ${severity.toUpperCase()}
+                    Predicted Additional Delay
 
                 </b>
 
-            </div>
 
+                <p>
 
-            <div>
+                    ${explanation}
 
-                <small>
-                    DISRUPTION DURATION
-                </small>
-
-                <b>
-                    ${duration} min
-                </b>
+                </p>
 
             </div>
 
@@ -2154,26 +3019,39 @@ function runSimulation() {
         </div>
 
 
-        <div class="simulation-calculation">
+
+        <div class="simulation-analysis">
 
 
-            <h3>
+            <div>
 
-                ETA Impact Analysis
+                <small>
 
-            </h3>
+                    AFFECTED AREA
 
-
-            <div class="calculation-row">
-
-                <span>
-
-                    Raw Disruption Impact
-
-                </span>
+                </small>
 
 
                 <b>
+
+                    ${affectedSection}
+
+                </b>
+
+            </div>
+
+
+
+            <div>
+
+                <small>
+
+                    SIMULATION IMPACT
+
+                </small>
+
+
+                <b class="delay-result">
 
                     +${impact} min
 
@@ -2182,36 +3060,19 @@ function runSimulation() {
             </div>
 
 
-            <div class="calculation-row">
 
-                <span>
+            <div>
 
-                    Expected Operational Recovery
+                <small>
 
-                </span>
+                    UPDATED TRAIN DELAY
 
-
-                <b class="recovery">
-
-                    −${recoverableDelay} min
-
-                </b>
-
-            </div>
-
-
-            <div class="calculation-row final-impact">
-
-                <span>
-
-                    Final ETA Impact
-
-                </span>
+                </small>
 
 
                 <b>
 
-                    +${finalImpact} min
+                    +${updatedDelay} min
 
                 </b>
 
@@ -2221,103 +3082,137 @@ function runSimulation() {
         </div>
 
 
+
         <div class="simulation-ai-note">
 
-            🧠
+            <span>
+
+                🧠
+
+            </span>
+
 
             <p>
 
-                RailForecast combines the simulated
-                disruption with historical section delay
-                patterns and operational recovery behaviour
-                to estimate the expected impact on future ETA.
+                This disruption impact can be passed to
+                the RailForecast Dynamic ETA Engine
+                together with live train movement,
+                historical section delay patterns,
+                real-time operational corrections
+                and Random Forest predictions.
 
             </p>
 
         </div>
+
         `;
 
 
-    result.scrollIntoView({
+    setTimeout(
 
-        behavior:
-            "smooth",
+        () => {
 
-        block:
-            "center"
 
-    });
+            result.scrollIntoView({
+
+                behavior:
+                    "smooth",
+
+                block:
+                    "center"
+
+            });
+
+
+        },
+
+        100
+
+    );
+
 
 }
 
 
 /* =========================================
-   AUTHORIZED API CONNECTION
+   CLOSE SIMULATION
+========================================= */
+
+function closeSimulation() {
+
+
+    const config =
+        document.getElementById(
+            "simulation-config"
+        );
+
+
+    const result =
+        document.getElementById(
+            "simulation-result"
+        );
+
+
+    config.classList.add(
+        "hide"
+    );
+
+
+    result.classList.add(
+        "hide"
+    );
+
+
+    result.innerHTML =
+        "";
+
+
+    currentSimulation =
+        null;
+
+
+}
+
+
+/* =========================================
+   CONNECT AUTHORIZED API
 ========================================= */
 
 function connectAPI(type) {
 
-    const endpointInput =
-        $(`${type}-endpoint`);
+
+    const endpoint =
+        document.getElementById(
+            `${type}-endpoint`
+        );
 
 
-    const keyInput =
-        $(`${type}-key`);
+    const apiKey =
+        document.getElementById(
+            `${type}-key`
+        );
 
 
     const status =
-        $(`${type}-status`);
+        document.getElementById(
+            `${type}-status`
+        );
 
+
+    /*
+    VALIDATE ENDPOINT
+    */
 
     if (
-        !endpointInput ||
-        !keyInput ||
-        !status
+        endpoint.value
+            .trim() ===
+        ""
     ) {
 
-        return;
 
-    }
-
-
-    const endpoint =
-        endpointInput.value.trim();
-
-
-    const key =
-        keyInput.value.trim();
-
-
-    /*
-     =====================================
-     VALIDATION
-     =====================================
-    */
-
-
-    if (!endpoint) {
-
-        status.textContent =
-            "Endpoint Required";
-
-
-        status.style.color =
-            "#ff8989";
-
-
-        return;
-
-    }
-
-
-    if (!key) {
-
-        status.textContent =
-            "API Key Required";
-
-
-        status.style.color =
-            "#ff8989";
+        alert(
+            "Please enter an API endpoint."
+        );
 
 
         return;
@@ -2326,22 +3221,29 @@ function connectAPI(type) {
 
 
     /*
-     =====================================
-     DEMO CONNECTION
-
-     For the SIH prototype,
-     this changes connection state.
-
-     When real government APIs are
-     provided, replace this section with
-     secure backend API integration.
-
-     IMPORTANT:
-     Real API keys should NOT be directly
-     exposed in frontend JavaScript.
-     =====================================
+    VALIDATE API KEY
     */
 
+    if (
+        apiKey.value
+            .trim() ===
+        ""
+    ) {
+
+
+        alert(
+            "Please enter an authorized API key."
+        );
+
+
+        return;
+
+    }
+
+
+    /*
+    SHOW CONNECTING
+    */
 
     status.textContent =
         "Connecting...";
@@ -2351,8 +3253,14 @@ function connectAPI(type) {
         "#f2b84b";
 
 
+    /*
+    SIMULATE CONNECTION
+    */
+
     setTimeout(
+
         () => {
+
 
             status.textContent =
                 "Connected";
@@ -2362,133 +3270,47 @@ function connectAPI(type) {
                 "#34c77b";
 
 
-            saveAPIConnection(
-                type,
-                endpoint
+            alert(
+
+                `${capitalize(type)} API connected successfully in prototype mode.`
+
             );
 
+
         },
-        900
+
+        1000
+
     );
+
 
 }
 
 
 /* =========================================
-   SAVE API CONNECTION STATUS
+   CAPITALIZE FUNCTION
 ========================================= */
 
-function saveAPIConnection(
-    type,
-    endpoint
-) {
-
-    const connections =
-        JSON.parse(
-
-            localStorage.getItem(
-                "railforecast-api-connections"
-            )
-
-        ) || {};
+function capitalize(text) {
 
 
-    connections[type] = {
+    return (
 
-        endpoint:
+        text.charAt(0)
+            .toUpperCase()
 
-            endpoint,
+        +
 
-        connected:
-
-            true,
-
-        connectedAt:
-
-            new Date().toISOString()
-
-    };
-
-
-    localStorage.setItem(
-
-        "railforecast-api-connections",
-
-        JSON.stringify(
-            connections
-        )
+        text.slice(1)
 
     );
+
 
 }
 
 
 /* =========================================
-   LOAD API CONNECTION STATUS
-========================================= */
-
-function loadAPIConnections() {
-
-    const connections =
-        JSON.parse(
-
-            localStorage.getItem(
-                "railforecast-api-connections"
-            )
-
-        ) || {};
-
-
-    Object.keys(
-        connections
-    ).forEach(
-        (type) => {
-
-            const connection =
-                connections[type];
-
-
-            const status =
-                $(`${type}-status`);
-
-
-            const endpoint =
-                $(`${type}-endpoint`);
-
-
-            if (
-                connection.connected &&
-                status
-            ) {
-
-                status.textContent =
-                    "Connected";
-
-
-                status.style.color =
-                    "#34c77b";
-
-            }
-
-
-            if (
-                connection.endpoint &&
-                endpoint
-            ) {
-
-                endpoint.value =
-                    connection.endpoint;
-
-            }
-
-        }
-    );
-
-}
-
-
-/* =========================================
-   PAGE LOAD
+   ENTER KEY TRAIN SEARCH
 ========================================= */
 
 document.addEventListener(
@@ -2497,97 +3319,97 @@ document.addEventListener(
 
     () => {
 
-        loadAPIConnections();
 
-    }
-
-);
-
-
-/* =========================================
-   OPTIONAL LIVE AUTO REFRESH
-========================================= */
-
-let liveRefreshInterval =
-    null;
+        const trainInput =
+            document.getElementById(
+                "train"
+            );
 
 
-function startLiveRefresh() {
-
-    if (
-        liveRefreshInterval
-    ) {
-
-        clearInterval(
-            liveRefreshInterval
-        );
-
-    }
+        if (
+            trainInput
+        ) {
 
 
-    /*
-     Refresh every 60 seconds.
+            trainInput.addEventListener(
 
-     When your real backend is connected,
-     this can call forecast() automatically.
-    */
+                "keydown",
 
-
-    liveRefreshInterval =
-        setInterval(
-
-            () => {
-
-                const passengerScreen =
-                    $("passenger");
+                event => {
 
 
-                const result =
-                    $("result");
+                    if (
+                        event.key ===
+                        "Enter"
+                    ) {
 
 
-                if (
+                        forecast();
 
-                    passengerScreen &&
 
-                    !passengerScreen.classList.contains(
-                        "hide"
-                    ) &&
+                    }
 
-                    result &&
-
-                    !result.classList.contains(
-                        "hide"
-                    )
-
-                ) {
-
-                    console.log(
-                        "Live forecast refresh available."
-                    );
 
                 }
 
-            },
-
-            60000
-
-        );
-
-}
+            );
 
 
-/* =========================================
-   INITIALIZE
-========================================= */
+        }
 
-document.addEventListener(
 
-    "DOMContentLoaded",
+        /*
+        SET DEFAULT DATE
+        */
 
-    () => {
+        const dateInput =
+            document.getElementById(
+                "date"
+            );
 
-        startLiveRefresh();
+
+        if (
+            dateInput
+        ) {
+
+
+            const today =
+                new Date();
+
+
+            const year =
+                today.getFullYear();
+
+
+            const month =
+                String(
+
+                    today.getMonth() +
+                    1
+
+                ).padStart(
+                    2,
+                    "0"
+                );
+
+
+            const day =
+                String(
+
+                    today.getDate()
+
+                ).padStart(
+                    2,
+                    "0"
+                );
+
+
+            dateInput.value =
+                `${year}-${month}-${day}`;
+
+
+        }
+
 
     }
 
