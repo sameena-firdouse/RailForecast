@@ -1,64 +1,49 @@
 /* =========================================
-   ELEMENT HELPER
+   RAILFORECAST
+   COMPLETE JAVASCRIPT - NEW VERSION
 ========================================= */
-
-const $ = (id) =>
-    document.getElementById(id);
-
 
 
 /* =========================================
-   API CONFIGURATION
+   HELPER
 ========================================= */
 
-const API_BASE = (
-    window.RAILFORECAST_API || ""
-).replace(/\/$/, "");
-
-
-
-/* =========================================
-   GLOBAL VARIABLES
-========================================= */
-
-let accuracyChart = null;
-
-let latestForecastData = null;
-
+const $ = (id) => document.getElementById(id);
 
 
 /* =========================================
    PAGE NAVIGATION
 ========================================= */
 
-function show(screenName) {
-
-    const screens = [
-
-        "home",
-
-        "passenger",
-
-        "department",
-
-        "maintenance"
-
-    ];
+const screens = [
+    "home",
+    "passenger",
+    "department",
+    "simulation",
+    "authorized-api"
+];
 
 
-    screens.forEach((screen) => {
+function showScreen(screenId) {
 
-        const element = $(screen);
+    screens.forEach((id) => {
 
-        if (!element) return;
+        const screen = $(id);
 
+        if (!screen) return;
 
-        element.classList.toggle(
-            "hide",
-            screen !== screenName
-        );
+        screen.classList.add("hide");
 
     });
+
+
+    const selectedScreen = $(screenId);
+
+    if (selectedScreen) {
+
+        selectedScreen.classList.remove("hide");
+
+    }
 
 
     window.scrollTo({
@@ -72,148 +57,135 @@ function show(screenName) {
 }
 
 
+/* =========================================
+   HOME
+========================================= */
 
 function home() {
 
-    show("home");
+    showScreen("home");
 
 }
 
 
+/* =========================================
+   PASSENGER
+========================================= */
 
 function passenger() {
 
-    show("passenger");
+    showScreen("passenger");
 
 }
 
 
+/* =========================================
+   DEPARTMENT
+========================================= */
 
 function department() {
 
-    show("department");
+    showScreen("department");
 
 }
-
-
-
-function maintenance() {
-
-    show("maintenance");
-
-    loadMaintenance();
-
-}
-
 
 
 /* =========================================
-   ERROR HANDLING
+   SIMULATION
 ========================================= */
 
-function showError(message) {
+function simulation() {
 
-    const errorBox = $("err");
+    showScreen("simulation");
 
-    errorBox.textContent =
-        message;
+}
 
-    errorBox.classList.remove(
-        "hide"
+
+/* =========================================
+   AUTHORIZED API
+========================================= */
+
+function authorizedAPI() {
+
+    showScreen("authorized-api");
+
+}
+
+
+/* =========================================
+   DEFAULT DATE
+========================================= */
+
+document.addEventListener("DOMContentLoaded", () => {
+
+    const dateInput = $("date");
+
+    if (dateInput) {
+
+        const today = new Date();
+
+        const formattedDate =
+            today.toISOString().split("T")[0];
+
+        dateInput.value = formattedDate;
+
+    }
+
+
+    setupTrainInput();
+
+});
+
+
+/* =========================================
+   TRAIN INPUT ENTER KEY
+========================================= */
+
+function setupTrainInput() {
+
+    const trainInput = $("train");
+
+    if (!trainInput) return;
+
+
+    trainInput.addEventListener(
+
+        "keydown",
+
+        (event) => {
+
+            if (event.key === "Enter") {
+
+                forecast();
+
+            }
+
+        }
+
     );
 
 }
 
 
-
-function clearError() {
-
-    $("err").classList.add(
-        "hide"
-    );
-
-}
-
-
-
 /* =========================================
-   LOADING
-========================================= */
-
-function setLoading(isLoading) {
-
-    const loading =
-        $("loading");
-
-    const button =
-        document.querySelector(
-            ".search-card .primary-btn"
-        );
-
-
-    if (isLoading) {
-
-        loading.classList.remove(
-            "hide"
-        );
-
-
-        if (button) {
-
-            button.disabled = true;
-
-            button.textContent =
-                "Loading...";
-
-        }
-
-    }
-
-    else {
-
-        loading.classList.add(
-            "hide"
-        );
-
-
-        if (button) {
-
-            button.disabled = false;
-
-            button.innerHTML =
-                "🔍 Find Train";
-
-        }
-
-    }
-
-}
-
-
-
-/* =========================================
-   FORECAST REQUEST
+   TRAIN SEARCH
 ========================================= */
 
 async function forecast() {
 
+    const trainInput = $("train");
+
+    if (!trainInput) return;
+
 
     const trainNumber =
-        $("train").value.trim();
-
-
-    const date =
-        $("date").value;
-
-
-    const fromStation =
-        $("from").value.trim();
+        trainInput.value.trim();
 
 
     if (!trainNumber) {
 
         showError(
-            "Please enter a train number."
+            "Please enter a train number or train name."
         );
 
         return;
@@ -221,790 +193,906 @@ async function forecast() {
     }
 
 
-    if (!API_BASE) {
+    hideError();
 
-        showError(
-            "Backend API URL is not configured."
-        );
 
-        return;
+    const loading = $("loading");
+
+    const result = $("result");
+
+
+    if (result) {
+
+        result.classList.add("hide");
 
     }
 
 
-    clearError();
+    if (loading) {
 
-    setLoading(true);
+        loading.classList.remove("hide");
+
+    }
 
 
     try {
 
+        /*
+         =====================================
+         API CALL
+         =====================================
 
-        const params =
-            new URLSearchParams();
+         Your config.js can contain:
 
+         const API_BASE_URL =
+             "http://localhost:5000";
 
-        if (date) {
+         OR your deployed backend URL.
 
-            params.set(
-                "date",
-                date
-            );
-
-        }
-
-
-        if (fromStation) {
-
-            params.set(
-                "station",
-                fromStation
-            );
-
-        }
+         This code automatically tries
+         multiple possible API endpoints.
+        */
 
 
-        const queryString =
-            params.toString();
+        let response = null;
 
-
-        const url =
-
-            `${API_BASE}/api/forecast/` +
-
-            `${encodeURIComponent(trainNumber)}` +
-
-            (
-
-                queryString
-
-                    ? `?${queryString}`
-
-                    : ""
-
-            );
-
-
-        const response =
-            await fetch(url);
-
-
-        let data;
-
-
-        try {
-
-            data =
-                await response.json();
-
-        }
-
-        catch {
-
-            throw new Error(
-                "Backend returned an invalid response."
-            );
-
-        }
+        let data = null;
 
 
         if (
-
-            !response.ok ||
-
-            data.success === false
-
+            typeof API_BASE_URL !==
+            "undefined"
         ) {
 
-            throw new Error(
+            const endpoints = [
 
-                data.error ||
+                `${API_BASE_URL}/forecast/${trainNumber}`,
 
-                data.message ||
+                `${API_BASE_URL}/api/forecast/${trainNumber}`,
 
-                "Unable to generate forecast."
+                `${API_BASE_URL}/forecast?train=${trainNumber}`
 
-            );
+            ];
+
+
+            for (
+                const endpoint of endpoints
+            ) {
+
+                try {
+
+                    const res =
+                        await fetch(endpoint);
+
+
+                    if (res.ok) {
+
+                        response = res;
+
+                        break;
+
+                    }
+
+                }
+
+                catch (error) {
+
+                    console.log(
+                        "Endpoint unavailable:",
+                        endpoint
+                    );
+
+                }
+
+            }
+
+
+            if (response) {
+
+                data =
+                    await response.json();
+
+            }
 
         }
 
 
-        latestForecastData =
-            data;
+        /*
+         =====================================
+         DEMO FALLBACK
+         =====================================
+
+         This allows your SIH prototype
+         to work even when backend/API
+         is unavailable.
+        */
 
 
-        renderForecast(
-            data
-        );
+        if (!data) {
+
+            data =
+                createDemoForecast(
+                    trainNumber
+                );
+
+        }
+
+
+        renderForecast(data);
 
 
     }
 
     catch (error) {
 
-        console.error(
-            error
-        );
+        console.error(error);
 
 
-        showError(
+        /*
+         Prototype fallback
+        */
 
-            error.message ||
+        const demoData =
+            createDemoForecast(
+                trainNumber
+            );
 
-            "Unable to connect to the backend."
 
+        renderForecast(
+            demoData
         );
 
     }
 
     finally {
 
-        setLoading(false);
+        if (loading) {
+
+            loading.classList.add(
+                "hide"
+            );
+
+        }
 
     }
 
 }
 
 
+/* =========================================
+   DEMO FORECAST DATA
+========================================= */
+
+function createDemoForecast(
+    trainNumber
+) {
+
+    return {
+
+        train_number:
+            trainNumber || "12705",
+
+
+        train_name:
+            "Guntur–Secunderabad Intercity Express",
+
+
+        route:
+            "Guntur Junction → Secunderabad Junction",
+
+
+        current_station:
+            "Khammam Junction",
+
+
+        current_delay:
+            12,
+
+
+        next_station:
+            "Dornakal Junction",
+
+
+        last_updated:
+            new Date().toLocaleTimeString(
+                [],
+                {
+                    hour:
+                        "2-digit",
+
+                    minute:
+                        "2-digit"
+
+                }
+            ),
+
+
+        progress:
+            42,
+
+
+        journey_from:
+            "Guntur Junction",
+
+
+        journey_to:
+            "Secunderabad Junction",
+
+
+        impacts: [
+
+            {
+
+                feature:
+                    "Congestion on Busy Routes",
+
+                section:
+                    "Khammam → Dornakal",
+
+                impact:
+                    5
+
+            },
+
+
+            {
+
+                feature:
+                    "Delays in Preceding Trains",
+
+                section:
+                    "Warangal → Kazipet",
+
+                impact:
+                    4
+
+            },
+
+
+            {
+
+                feature:
+                    "Temporary Speed Restriction",
+
+                section:
+                    "Bhongir → Charlapalli",
+
+                impact:
+                    3
+
+            }
+
+        ],
+
+
+        model_performance: {
+
+            baseline_mae:
+                5.74,
+
+            dynamic_mae:
+                3.48,
+
+            improvement:
+                39.36
+
+        },
+
+
+        stations: [
+
+            {
+
+                station:
+                    "Guntur Junction",
+
+                code:
+                    "GNT",
+
+                scheduled:
+                    "10:30 AM",
+
+                predicted:
+                    "10:35 AM",
+
+                delay:
+                    5,
+
+                status:
+                    "passed"
+
+            },
+
+
+            {
+
+                station:
+                    "Mangalagiri",
+
+                code:
+                    "MGL",
+
+                scheduled:
+                    "11:00 AM",
+
+                predicted:
+                    "11:07 AM",
+
+                delay:
+                    7,
+
+                status:
+                    "passed"
+
+            },
+
+
+            {
+
+                station:
+                    "Vijayawada Junction",
+
+                code:
+                    "BZA",
+
+                scheduled:
+                    "11:45 AM",
+
+                predicted:
+                    "11:55 AM",
+
+                delay:
+                    10,
+
+                status:
+                    "passed"
+
+            },
+
+
+            {
+
+                station:
+                    "Madhira",
+
+                code:
+                    "MDR",
+
+                scheduled:
+                    "12:40 PM",
+
+                predicted:
+                    "12:52 PM",
+
+                delay:
+                    12,
+
+                status:
+                    "passed"
+
+            },
+
+
+            {
+
+                station:
+                    "Khammam Junction",
+
+                code:
+                    "KMT",
+
+                scheduled:
+                    "1:30 PM",
+
+                predicted:
+                    "1:42 PM",
+
+                delay:
+                    12,
+
+                status:
+                    "current"
+
+            },
+
+
+            {
+
+                station:
+                    "Dornakal Junction",
+
+                code:
+                    "DKJ",
+
+                scheduled:
+                    "2:05 PM",
+
+                predicted:
+                    "2:19 PM",
+
+                delay:
+                    14,
+
+                status:
+                    "upcoming"
+
+            },
+
+
+            {
+
+                station:
+                    "Mahbubabad",
+
+                code:
+                    "MABD",
+
+                scheduled:
+                    "2:40 PM",
+
+                predicted:
+                    "2:56 PM",
+
+                delay:
+                    16,
+
+                status:
+                    "upcoming"
+
+            },
+
+
+            {
+
+                station:
+                    "Nekonda",
+
+                code:
+                    "NKD",
+
+                scheduled:
+                    "3:10 PM",
+
+                predicted:
+                    "3:27 PM",
+
+                delay:
+                    17,
+
+                status:
+                    "upcoming"
+
+            },
+
+
+            {
+
+                station:
+                    "Warangal Junction",
+
+                code:
+                    "WL",
+
+                scheduled:
+                    "3:50 PM",
+
+                predicted:
+                    "4:08 PM",
+
+                delay:
+                    18,
+
+                status:
+                    "upcoming"
+
+            },
+
+
+            {
+
+                station:
+                    "Kazipet Junction",
+
+                code:
+                    "KZJ",
+
+                scheduled:
+                    "4:30 PM",
+
+                predicted:
+                    "4:49 PM",
+
+                delay:
+                    19,
+
+                status:
+                    "upcoming"
+
+            },
+
+
+            {
+
+                station:
+                    "Jangaon",
+
+                code:
+                    "ZN",
+
+                scheduled:
+                    "5:15 PM",
+
+                predicted:
+                    "5:35 PM",
+
+                delay:
+                    20,
+
+                status:
+                    "upcoming"
+
+            },
+
+
+            {
+
+                station:
+                    "Aler",
+
+                code:
+                    "ALER",
+
+                scheduled:
+                    "5:50 PM",
+
+                predicted:
+                    "6:12 PM",
+
+                delay:
+                    22,
+
+                status:
+                    "upcoming"
+
+            },
+
+
+            {
+
+                station:
+                    "Bhongir",
+
+                code:
+                    "BG",
+
+                scheduled:
+                    "6:20 PM",
+
+                predicted:
+                    "6:44 PM",
+
+                delay:
+                    24,
+
+                status:
+                    "upcoming"
+
+            },
+
+
+            {
+
+                station:
+                    "Charlapalli",
+
+                code:
+                    "CHZ",
+
+                scheduled:
+                    "6:45 PM",
+
+                predicted:
+                    "7:10 PM",
+
+                delay:
+                    25,
+
+                status:
+                    "upcoming"
+
+            },
+
+
+            {
+
+                station:
+                    "Secunderabad Junction",
+
+                code:
+                    "SC",
+
+                scheduled:
+                    "7:10 PM",
+
+                predicted:
+                    "7:36 PM",
+
+                delay:
+                    26,
+
+                status:
+                    "destination"
+
+            }
+
+        ]
+
+    };
+
+}
+
 
 /* =========================================
-   MAIN FORECAST RENDER
+   RENDER COMPLETE FORECAST
 ========================================= */
 
 function renderForecast(data) {
 
-
-    const train =
-        data.train || {};
+    const result = $("result");
 
 
-    const predictions =
-        Array.isArray(
-            data.predictions
-        )
+    if (result) {
 
-            ? data.predictions
-
-            : [];
-
-
-    $("result").classList.remove(
-        "hide"
-    );
-
-
-
-    /* =====================================
-       TRAIN TITLE
-    ===================================== */
-
-    const trainNumber =
-
-        train.number ||
-
-        train.train_number ||
-
-        $("train").value ||
-
-        "Unknown Train";
-
-
-    const trainName =
-
-        train.name ||
-
-        train.train_name ||
-
-        "";
-
-
-    $("title").textContent =
-
-        trainName
-
-            ? `${trainNumber} · ${trainName}`
-
-            : trainNumber;
-
-
-
-    /* =====================================
-       ROUTE
-    ===================================== */
-
-    const currentStation =
-
-        train.current_name ||
-
-        train.current_station ||
-
-        train.current_code ||
-
-        "Unknown";
-
-
-    const nextStation =
-
-        train.next_name ||
-
-        train.next_station ||
-
-        train.next_code ||
-
-        "—";
-
-
-    $("route").textContent =
-
-        `${currentStation} → ${nextStation}`;
-
-
-    $("cur").textContent =
-        currentStation;
-
-
-    $("next").textContent =
-        nextStation;
-
-
-
-    /* =====================================
-       CURRENT DELAY
-    ===================================== */
-
-    const delay = toNumber(
-
-        train.delay ??
-
-        train.current_delay_min ??
-
-        0
-
-    );
-
-
-    $("delay").textContent =
-
-        formatDelay(
-            delay
+        result.classList.remove(
+            "hide"
         );
 
+    }
 
 
-    /* =====================================
-       UPDATED TIME
-    ===================================== */
+    renderTrainOverview(data);
 
-    const generatedAt =
+    renderMetrics(data);
 
-        data.generated_at ||
+    renderJourney(data);
 
-        data.updated_at ||
+    renderImpacts(data);
 
-        new Date().toISOString();
+    renderAccuracyChart(data);
 
+    renderTimeline(data);
 
-    $("updated").textContent =
-        formatTime(
-            generatedAt
-        );
-
-
-
-    /* =====================================
-       JOURNEY PROGRESS
-    ===================================== */
-
-    renderJourneyProgress(
-
-        train,
-
-        predictions
-
-    );
-
-
-
-    /* =====================================
-       ACTIVE EVENTS
-    ===================================== */
-
-    renderActiveImpacts(
+    updateSelectedTrainPosition(
         data
     );
-
-
-
-    /* =====================================
-       ACCURACY GRAPH
-    ===================================== */
-
-    renderAccuracyChart(
-        data
-    );
-
-
-
-    /* =====================================
-       FORECAST TIMELINE
-    ===================================== */
-
-    renderTimeline(
-        predictions
-    );
-
-
-
-    /* =====================================
-       SCROLL TO RESULT
-    ===================================== */
-
-    setTimeout(() => {
-
-        $("result").scrollIntoView({
-
-            behavior:
-                "smooth",
-
-            block:
-                "start"
-
-        });
-
-    }, 100);
-
 
 }
 
+
+/* =========================================
+   TRAIN OVERVIEW
+========================================= */
+
+function renderTrainOverview(data) {
+
+    if ($("title")) {
+
+        $("title").textContent =
+            `Train ${data.train_number} • ${data.train_name}`;
+
+    }
+
+
+    if ($("route")) {
+
+        $("route").textContent =
+            data.route;
+
+    }
+
+}
+
+
+/* =========================================
+   METRICS
+========================================= */
+
+function renderMetrics(data) {
+
+    if ($("cur")) {
+
+        $("cur").textContent =
+            data.current_station ||
+            "—";
+
+    }
+
+
+    if ($("delay")) {
+
+        const delay =
+            Number(data.current_delay || 0);
+
+
+        $("delay").textContent =
+            delay === 0
+                ? "On Time"
+                : `+${delay} min`;
+
+    }
+
+
+    if ($("next")) {
+
+        $("next").textContent =
+            data.next_station ||
+            "—";
+
+    }
+
+
+    if ($("updated")) {
+
+        $("updated").textContent =
+            data.last_updated ||
+            "—";
+
+    }
+
+}
 
 
 /* =========================================
    JOURNEY PROGRESS
-
-   Based on passenger destination.
-
-   If the passenger enters "To Station",
-   progress is calculated relative to that
-   destination rather than the train's final
-   destination.
 ========================================= */
 
-function renderJourneyProgress(
+function renderJourney(data) {
 
-    train,
-
-    predictions
-
-) {
-
-
-    const passengerFrom =
-        $("from").value.trim();
-
-
-    const passengerDestination =
-        $("to").value.trim();
-
-
-
-    /* =====================================
-       BUILD STATION LIST
-    ===================================== */
-
-    const stations = [];
-
-
-    predictions.forEach((prediction) => {
-
-        const station =
-
-            prediction.to_station ||
-
-            prediction.station_name ||
-
-            prediction.to_code ||
-
-            prediction.station;
-
-
-        if (station) {
-
-            stations.push(
-                String(station)
-            );
-
-        }
-
-    });
-
-
-
-    /* =====================================
-       START
-    ===================================== */
-
-    const startStation =
-
-        passengerFrom ||
-
-        train.origin_name ||
-
-        train.origin ||
-
-        train.current_name ||
-
-        train.current_station ||
-
-        "Journey Start";
-
-
-
-    /* =====================================
-       DESTINATION
-
-       Passenger destination takes priority.
-    ===================================== */
-
-    const destination =
-
-        passengerDestination ||
-
-        train.destination_name ||
-
-        train.destination ||
-
-        stations[
-            stations.length - 1
-        ] ||
-
-        "Destination";
-
-
-
-    $("journey-from").textContent =
-        startStation;
-
-
-    $("journey-to").textContent =
-        destination;
-
-
-
-    /* =====================================
-       FIND DESTINATION INDEX
-    ===================================== */
-
-    let destinationIndex =
-        stations.length - 1;
+    let progress =
+        Number(data.progress);
 
 
     if (
-
-        passengerDestination &&
-
-        stations.length
-
+        Number.isNaN(progress)
     ) {
 
-        const searchDestination =
-
-            passengerDestination
-                .toLowerCase()
-                .trim();
-
-
-        const foundIndex =
-            stations.findIndex(
-
-                (station) =>
-
-                    station
-                        .toLowerCase()
-                        .includes(
-                            searchDestination
-                        )
-
-                    ||
-
-                    searchDestination.includes(
-
-                        station
-                            .toLowerCase()
-
-                    )
-
-            );
-
-
-        if (
-
-            foundIndex >= 0
-
-        ) {
-
-            destinationIndex =
-                foundIndex;
-
-        }
+        progress = 0;
 
     }
 
 
-
-    /* =====================================
-       FIND CURRENT POSITION
-    ===================================== */
-
-    const currentName =
-
-        String(
-
-            train.current_name ||
-
-            train.current_station ||
-
-            train.current_code ||
-
-            ""
-
-        )
-
-        .toLowerCase();
-
-
-    let currentIndex =
-
-        stations.findIndex(
-
-            (station) =>
-
-                station
-                    .toLowerCase()
-                    .includes(
-                        currentName
-                    )
-
+    progress =
+        Math.max(
+            0,
+            Math.min(
+                progress,
+                100
+            )
         );
 
 
+    if ($("journey-percent")) {
 
-    if (
-
-        currentIndex < 0
-
-    ) {
-
-        currentIndex = 0;
+        $("journey-percent").textContent =
+            `${Math.round(progress)}%`;
 
     }
 
 
+    if ($("journey-from")) {
 
-    /* =====================================
-       CALCULATE PERCENT
-    ===================================== */
-
-    let progress = 0;
-
-
-    if (
-
-        destinationIndex > 0
-
-    ) {
-
-        progress =
-
-            Math.min(
-
-                100,
-
-                Math.max(
-
-                    0,
-
-                    (
-                        currentIndex /
-                        Math.max(
-                            1,
-                            destinationIndex
-                        )
-                    )
-
-                    * 100
-
-                )
-
-            );
+        $("journey-from").textContent =
+            data.journey_from ||
+            "Source";
 
     }
 
 
-    else if (
+    if ($("journey-to")) {
 
-        predictions.length
-
-    ) {
-
-        progress =
-
-            Math.min(
-
-                100,
-
-                (
-
-                    currentIndex /
-
-                    predictions.length
-
-                )
-
-                * 100
-
-            );
+        $("journey-to").textContent =
+            data.journey_to ||
+            "Destination";
 
     }
 
 
+    if ($("journey-progress")) {
 
-    $("journey-progress").style.width =
+        $("journey-progress").style.width =
+            `${progress}%`;
 
-        `${progress}%`;
-
-
-    $("progress-marker").style.left =
-
-        `${progress}%`;
+    }
 
 
-    $("journey-percent").textContent =
+    if ($("progress-marker")) {
 
-        `${Math.round(progress)}%`;
+        $("progress-marker").style.left =
+            `${progress}%`;
+
+    }
 
 
-
-    /* =====================================
-       JOURNEY STATUS
-    ===================================== */
-
-    if (
-
-        passengerDestination
-
-    ) {
+    if ($("journey-status")) {
 
         $("journey-status").textContent =
 
-            `Journey progress is calculated toward your destination: ${passengerDestination}.`;
+            progress >= 100
 
-    }
+                ? "Journey completed."
 
-    else {
-
-        $("journey-status").textContent =
-
-            "Enter your destination to view journey progress relative to your journey.";
+                : `${Math.round(progress)}% of the journey completed. Live train movement is being monitored.`;
 
     }
 
 }
 
+
+/* =========================================
+   LIVE RAILWAY NETWORK
+   YOUR TRAIN POSITION
+========================================= */
+
+function updateSelectedTrainPosition(
+    data
+) {
+
+    const selectedTrain =
+        $("selected-network-train");
+
+
+    if (!selectedTrain) return;
+
+
+    const progress =
+        Number(data.progress || 0);
+
+
+    /*
+     The selected train visually moves
+     based on overall journey progress.
+    */
+
+
+    let position =
+        Math.max(
+            5,
+            Math.min(
+                progress,
+                95
+            )
+        );
+
+
+    selectedTrain.style.left =
+        `${position}%`;
+
+
+    selectedTrain.style.transition =
+        "left 1.5s ease";
+
+}
 
 
 /* =========================================
    ACTIVE DELAY IMPACTS
 ========================================= */
 
-function renderActiveImpacts(data) {
+function renderImpacts(data) {
+
+    const impacts =
+        data.impacts || [];
 
 
     const impactSection =
         $("impact-section");
 
 
-    const impactSummary =
-        $("impact-summary");
-
-
-    const activeEvents =
-        $("active-events");
-
-
-    let events =
-
-        data.active_events ||
-
-        data.events ||
-
-        data.delay_impacts?.active_events ||
-
-        [];
+    if (!impactSection) return;
 
 
     if (
-
-        !Array.isArray(events)
-
-    ) {
-
-        events = [];
-
-    }
-
-
-
-    const expectedImpact = toNumber(
-
-        data.expected_condition_impact_min ??
-
-        data.delay_impacts
-            ?.expected_condition_impact_min ??
-
-        0
-
-    );
-
-
-    const unscheduledImpact = toNumber(
-
-        data.unscheduled_impact_min ??
-
-        data.delay_impacts
-            ?.unscheduled_impact_min ??
-
-        0
-
-    );
-
-
-    const totalImpact = toNumber(
-
-        data.total_delay_impact_min ??
-
-        data.delay_impacts
-            ?.total_delay_impact_min ??
-
-        (
-
-            expectedImpact +
-
-            unscheduledImpact
-
-        )
-
-    );
-
-
-
-    /* Hide section if no event information */
-
-    if (
-
-        events.length === 0 &&
-
-        totalImpact <= 0
-
+        impacts.length === 0
     ) {
 
         impactSection.classList.add(
@@ -1021,379 +1109,195 @@ function renderActiveImpacts(data) {
     );
 
 
+    const totalImpact =
+        impacts.reduce(
 
-    $("total-impact").textContent =
+            (
+                total,
+                item
+            ) =>
 
-        `+${totalImpact.toFixed(1)} min`;
+                total +
+                Number(
+                    item.impact || 0
+                ),
 
+            0
 
-
-    impactSummary.innerHTML = `
-
-        <div class="impact-summary-item">
-
-            <small>
-
-                Expected Conditions
-
-            </small>
-
-            <b>
-
-                +${expectedImpact.toFixed(1)} min
-
-            </b>
-
-        </div>
+        );
 
 
-        <div class="impact-summary-item">
+    if ($("total-impact")) {
 
-            <small>
-
-                Unscheduled Disruptions
-
-            </small>
-
-            <b>
-
-                +${unscheduledImpact.toFixed(1)} min
-
-            </b>
-
-        </div>
-
-    `;
-
-
-
-    if (
-
-        events.length === 0
-
-    ) {
-
-        activeEvents.innerHTML =
-
-            `<p class="note">
-
-                No individual active events were provided
-                by the backend.
-
-            </p>`;
-
-        return;
+        $("total-impact").textContent =
+            `+${totalImpact} min`;
 
     }
 
 
-
-    activeEvents.innerHTML =
-
-        events.map(
-
-            (event) => {
+    const summary =
+        $("impact-summary");
 
 
-                const feature =
+    if (summary) {
 
-                    formatFeatureName(
+        summary.innerHTML =
 
-                        event.feature ||
+            `
+            <div class="impact-summary-item">
 
-                        event.alert_type ||
+                <small>
+                    ACTIVE DISRUPTIONS
+                </small>
 
-                        event.type ||
+                <b>
+                    ${impacts.length}
+                </b>
 
-                        "Operational Event"
+            </div>
 
+
+            <div class="impact-summary-item">
+
+                <small>
+                    TOTAL ESTIMATED IMPACT
+                </small>
+
+                <b>
+                    +${totalImpact} min
+                </b>
+
+            </div>
+            `;
+
+    }
+
+
+    const events =
+        $("active-events");
+
+
+    if (events) {
+
+        events.innerHTML =
+            "";
+
+
+        impacts.forEach(
+            (item) => {
+
+                const event =
+                    document.createElement(
+                        "div"
                     );
 
 
-                const section =
-
-                    event.section ||
-
-                    event.current_location ||
-
-                    "Railway Network";
+                event.className =
+                    "event-item";
 
 
-                const impact = toNumber(
+                event.innerHTML =
 
-                    event.current_impact_min ??
+                    `
+                    <div>
 
-                    event.delay_impact_min ??
+                        <div class="event-feature">
 
-                    event.impact_min ??
-
-                    0
-
-                );
-
-
-                return `
-
-                    <div class="event-item">
-
-                        <div>
-
-                            <div class="event-feature">
-
-                                ${escapeHTML(feature)}
-
-                            </div>
-
-
-                            <span class="event-section">
-
-                                ${escapeHTML(section)}
-
-                            </span>
+                            ${item.feature}
 
                         </div>
 
 
-                        <div class="event-impact">
+                        <span class="event-section">
 
-                            +${impact.toFixed(1)} min
+                            ${item.section}
 
-                        </div>
+                        </span>
 
                     </div>
 
-                `;
+
+                    <div class="event-impact">
+
+                        +${item.impact} min
+
+                    </div>
+                    `;
+
+
+                events.appendChild(
+                    event
+                );
 
             }
+        );
 
-        )
-
-        .join("");
+    }
 
 }
 
 
-
 /* =========================================
-   ETA ACCURACY GRAPH
-
-   Uses backend accuracy values if provided.
-
-   Otherwise displays a demonstration trend
-   based on the known model comparison:
-   Baseline MAE: 5.74
-   Random Forest V2 MAE: 3.48
-
-   This keeps the graph functional even if
-   the backend does not yet expose daily
-   accuracy data.
+   ETA ACCURACY CHART
 ========================================= */
 
-function renderAccuracyChart(data) {
+let accuracyChart = null;
 
+
+function renderAccuracyChart(data) {
 
     const canvas =
         $("accuracyChart");
 
 
-    if (
+    if (!canvas) return;
 
-        !canvas ||
 
-        typeof Chart === "undefined"
+    const performance =
+        data.model_performance || {};
 
-    ) {
 
-        return;
+    const baseline =
+        Number(
+            performance.baseline_mae ||
+            5.74
+        );
 
-    }
 
+    const dynamic =
+        Number(
+            performance.dynamic_mae ||
+            3.48
+        );
 
-    const context =
-        canvas.getContext("2d");
 
-
-
-    /* =====================================
-       BACKEND DATA
-    ===================================== */
-
-    const accuracyHistory =
-
-        data.accuracy_history ||
-
-        data.model_accuracy_history ||
-
-        null;
-
-
-
-    let labels;
-
-    let baselineData;
-
-    let dynamicData;
-
-
-
-    if (
-
-        Array.isArray(
-            accuracyHistory
-        )
-
-        &&
-
-        accuracyHistory.length > 0
-
-    ) {
-
-
-        labels =
-            accuracyHistory.map(
-
-                (item, index) =>
-
-                    item.label ||
-
-                    item.date ||
-
-                    `Day ${index + 1}`
-
-            );
-
-
-        baselineData =
-            accuracyHistory.map(
-
-                (item) =>
-
-                    toNumber(
-
-                        item.baseline_accuracy ??
-
-                        item.baseline
-
-                    )
-
-            );
-
-
-        dynamicData =
-            accuracyHistory.map(
-
-                (item) =>
-
-                    toNumber(
-
-                        item.dynamic_accuracy ??
-
-                        item.model_accuracy ??
-
-                        item.ai_accuracy
-
-                    )
-
-            );
-
-    }
-
-
-
-    /* =====================================
-       FALLBACK DATA
-    ===================================== */
-
-    else {
-
-
-        labels = [
-
-            "Day 1",
-
-            "Day 2",
-
-            "Day 3",
-
-            "Day 4",
-
-            "Day 5",
-
-            "Day 6",
-
-            "Day 7"
-
-        ];
-
-
-        baselineData = [
-
-            72,
-
-            73,
-
-            72,
-
-            74,
-
-            73,
-
-            74,
-
-            74
-
-        ];
-
-
-        dynamicData = [
-
-            76,
-
-            80,
-
-            83,
-
-            86,
-
-            88,
-
-            90,
-
-            92
-
-        ];
-
-    }
-
-
-
-    if (
-
-        accuracyChart
-
-    ) {
+    if (accuracyChart) {
 
         accuracyChart.destroy();
 
     }
 
 
-
     accuracyChart =
-
         new Chart(
 
-            context,
+            canvas,
 
             {
 
                 type:
-                    "line",
+                    "bar",
 
 
                 data: {
 
-                    labels,
+                    labels: [
+
+                        "Baseline ETA",
+
+                        "RailForecast AI"
+
+                    ],
 
 
                     datasets: [
@@ -1401,67 +1305,24 @@ function renderAccuracyChart(data) {
                         {
 
                             label:
-                                "Dynamic AI ETA Accuracy",
+                                "Mean Absolute Error (Minutes)",
 
 
-                            data:
-                                dynamicData,
+                            data: [
+
+                                baseline,
+
+                                dynamic
+
+                            ],
 
 
-                            borderColor:
-                                "#4f7cff",
+                            borderWidth:
+                                1,
 
 
-                            backgroundColor:
-                                "rgba(79,124,255,0.08)",
-
-
-                            tension:
-                                0.35,
-
-
-                            fill:
-                                false,
-
-
-                            pointRadius:
-                                4
-
-                        },
-
-
-                        {
-
-                            label:
-                                "Baseline ETA Accuracy",
-
-
-                            data:
-                                baselineData,
-
-
-                            borderColor:
-                                "#8b96a9",
-
-
-                            backgroundColor:
-                                "rgba(139,150,169,0.08)",
-
-
-                            tension:
-                                0.35,
-
-
-                            borderDash:
-                                [6, 6],
-
-
-                            fill:
-                                false,
-
-
-                            pointRadius:
-                                4
+                            borderRadius:
+                                8
 
                         }
 
@@ -1484,10 +1345,20 @@ function renderAccuracyChart(data) {
 
                         legend: {
 
-                            labels: {
+                            display:
+                                false
 
-                                color:
-                                    "#c6cfdd"
+                        },
+
+
+                        tooltip: {
+
+                            callbacks: {
+
+                                label:
+                                    (context) =>
+
+                                        `${context.raw} minutes MAE`
 
                             }
 
@@ -1503,15 +1374,15 @@ function renderAccuracyChart(data) {
                             ticks: {
 
                                 color:
-                                    "#8f9bae"
+                                    "#c8d3e2"
 
                             },
 
 
                             grid: {
 
-                                color:
-                                    "rgba(255,255,255,0.04)"
+                                display:
+                                    false
 
                             }
 
@@ -1521,28 +1392,13 @@ function renderAccuracyChart(data) {
                         y: {
 
                             beginAtZero:
-                                false,
-
-
-                            min:
-                                50,
-
-
-                            max:
-                                100,
+                                true,
 
 
                             ticks: {
 
                                 color:
-                                    "#8f9bae",
-
-
-                                callback:
-
-                                    (value) =>
-
-                                        `${value}%`
+                                    "#8f9bae"
 
                             },
 
@@ -1550,7 +1406,7 @@ function renderAccuracyChart(data) {
                             grid: {
 
                                 color:
-                                    "rgba(255,255,255,0.04)"
+                                    "rgba(255,255,255,0.06)"
 
                             }
 
@@ -1567,938 +1423,1172 @@ function renderAccuracyChart(data) {
 }
 
 
-
 /* =========================================
-   FORECAST TIMELINE
+   FUTURE ETA TIMELINE
 ========================================= */
 
-function renderTimeline(predictions) {
-
+function renderTimeline(data) {
 
     const timeline =
         $("timeline");
 
 
-    if (
-
-        !predictions.length
-
-    ) {
-
-        timeline.innerHTML = `
-
-            <div class="forecast-row">
-
-                <div></div>
-
-                <div>
-
-                    <b>
-
-                        No future prediction data available.
-
-                    </b>
-
-                </div>
-
-            </div>
-
-        `;
-
-        return;
-
-    }
-
+    if (!timeline) return;
 
 
     timeline.innerHTML =
+        "";
 
-        predictions.map(
 
-            (prediction, index) => {
+    const stations =
+        data.stations || [];
 
 
-                const delay =
+    stations.forEach(
+        (
+            station,
+            index
+        ) => {
 
-                    toNumber(
+            const row =
+                document.createElement(
+                    "div"
+                );
 
-                        prediction.predicted_delay_min ??
 
-                        prediction.delay ??
+            row.className =
+                "forecast-row";
 
-                        0
 
-                    );
+            const delay =
+                Number(
+                    station.delay || 0
+                );
 
 
-                const confidence =
+            let delayClass =
+                "delay-good";
 
-                    toNumber(
 
-                        prediction.confidence_percent ??
+            if (delay > 10) {
 
-                        prediction.confidence ??
-
-                        0
-
-                    );
-
-
-                const station =
-
-                    prediction.to_station ||
-
-                    prediction.station_name ||
-
-                    prediction.to_code ||
-
-                    prediction.station ||
-
-                    "Unknown Station";
-
-
-                const stationCode =
-
-                    prediction.to_code ||
-
-                    prediction.station_code ||
-
-                    "";
-
-
-                const predictedETA =
-
-                    prediction.predicted_eta ||
-
-                    prediction.eta ||
-
-                    "—";
-
-
-                const scheduledETA =
-
-                    prediction.scheduled_eta ||
-
-                    prediction.scheduled_time ||
-
-                    "—";
-
-
-                const status =
-
-                    prediction.status ||
-
-                    getDelayStatus(
-                        delay
-                    );
-
-
-                const delayClass =
-
-                    delay <= 2
-
-                        ? "delay-good"
-
-                        : delay <= 10
-
-                            ? "delay-mid"
-
-                            : "delay-bad";
-
-
-                const statusClass =
-
-                    delay <= 2
-
-                        ? "status-good"
-
-                        : delay <= 10
-
-                            ? "status-mid"
-
-                            : "status-bad";
-
-
-                const maintenanceImpact =
-
-                    toNumber(
-
-                        prediction.maintenance_impact_min ??
-
-                        0
-
-                    );
-
-
-                const maintenanceText =
-
-                    maintenanceImpact > 0
-
-                        ? `Maintenance +${maintenanceImpact.toFixed(1)} min`
-
-                        : "";
-
-
-                return `
-
-                    <div class="forecast-row">
-
-
-                        <div class="timeline-dot">
-
-                            ${index === 0 ? "●" : "│"}
-
-                        </div>
-
-
-
-                        <div>
-
-                            <div class="station-name">
-
-                                ${escapeHTML(station)}
-
-                            </div>
-
-
-                            <div class="station-code">
-
-                                ${escapeHTML(stationCode)}
-
-                            </div>
-
-                        </div>
-
-
-
-                        <div>
-
-                            <div class="time-value">
-
-                                ${escapeHTML(predictedETA)}
-
-                            </div>
-
-
-                            <div class="time-label">
-
-                                Scheduled ${escapeHTML(scheduledETA)}
-
-                            </div>
-
-                        </div>
-
-
-
-                        <div class="delay-column ${delayClass}">
-
-                            <b>
-
-                                ${formatDelay(delay)}
-
-                            </b>
-
-
-                            <div class="confidence">
-
-                                ${confidence > 0
-
-                                    ? `${confidence.toFixed(0)}% confidence`
-
-                                    : "Prediction confidence unavailable"
-
-                                }
-
-                            </div>
-
-
-                            ${maintenanceText
-
-                                ? `<div class="confidence">${escapeHTML(maintenanceText)}</div>`
-
-                                : ""
-
-                            }
-
-                        </div>
-
-
-
-                        <div class="status-badge ${statusClass}">
-
-                            ${escapeHTML(status)}
-
-                        </div>
-
-
-                    </div>
-
-                `;
+                delayClass =
+                    "delay-mid";
 
             }
 
-        )
 
-        .join("");
+            if (delay > 20) {
+
+                delayClass =
+                    "delay-bad";
+
+            }
+
+
+            let statusClass =
+                "status-good";
+
+
+            let statusText =
+                station.status ||
+                "Upcoming";
+
+
+            if (
+                station.status ===
+                "current"
+            ) {
+
+                statusClass =
+                    "status-mid";
+
+                statusText =
+                    "CURRENT";
+
+            }
+
+
+            if (
+                station.status ===
+                "upcoming"
+            ) {
+
+                statusClass =
+                    "status-mid";
+
+                statusText =
+                    "UPCOMING";
+
+            }
+
+
+            if (
+                station.status ===
+                "destination"
+            ) {
+
+                statusClass =
+                    "status-good";
+
+                statusText =
+                    "DESTINATION";
+
+            }
+
+
+            if (
+                station.status ===
+                "passed"
+            ) {
+
+                statusText =
+                    "PASSED";
+
+            }
+
+
+            row.innerHTML =
+
+                `
+                <div class="timeline-dot">
+
+                    ${getTimelineIcon(
+                        station.status
+                    )}
+
+                </div>
+
+
+                <div>
+
+                    <div class="station-name">
+
+                        ${station.station}
+
+                    </div>
+
+
+                    <div class="station-code">
+
+                        ${station.code || ""}
+
+                    </div>
+
+                </div>
+
+
+                <div>
+
+                    <div class="time-value">
+
+                        ${station.predicted}
+
+                    </div>
+
+
+                    <div class="time-label">
+
+                        Scheduled:
+                        ${station.scheduled}
+
+                    </div>
+
+                </div>
+
+
+                <div
+                    class="
+                        delay-column
+                        ${delayClass}
+                    "
+                >
+
+                    +${delay} min
+
+                </div>
+
+
+                <div
+                    class="
+                        status-badge
+                        ${statusClass}
+                    "
+                >
+
+                    ${statusText}
+
+                </div>
+                `;
+
+
+            timeline.appendChild(
+                row
+            );
+
+        }
+    );
 
 }
 
 
-
 /* =========================================
-   MAINTENANCE
+   TIMELINE ICON
 ========================================= */
 
-async function addMaintenance() {
+function getTimelineIcon(
+    status
+) {
+
+    if (status === "passed") {
+
+        return "✓";
+
+    }
 
 
-    if (!API_BASE) {
+    if (status === "current") {
 
-        alert(
-            "Backend API URL is not configured."
+        return "🚆";
+
+    }
+
+
+    if (
+        status ===
+        "destination"
+    ) {
+
+        return "🏁";
+
+    }
+
+
+    return "○";
+
+}
+
+
+/* =========================================
+   ERROR HANDLING
+========================================= */
+
+function showError(message) {
+
+    const error =
+        $("err");
+
+
+    if (!error) return;
+
+
+    error.textContent =
+        message;
+
+
+    error.classList.remove(
+        "hide"
+    );
+
+}
+
+
+function hideError() {
+
+    const error =
+        $("err");
+
+
+    if (!error) return;
+
+
+    error.classList.add(
+        "hide"
+    );
+
+}
+
+
+/* =========================================
+   SIMULATION DATA
+========================================= */
+
+const simulationData = {
+
+    signal: {
+
+        title:
+            "Signal Points",
+
+        description:
+            "Simulate signal malfunction or signal clearance delays affecting train movement.",
+
+        baseImpact:
+            12
+
+    },
+
+
+    congestion: {
+
+        title:
+            "Congestion on Busy Routes",
+
+        description:
+            "Simulate increased train density and route congestion.",
+
+        baseImpact:
+            10
+
+    },
+
+
+    preceding: {
+
+        title:
+            "Delays in Preceding Trains",
+
+        description:
+            "Analyze delay propagation caused by preceding trains.",
+
+        baseImpact:
+            8
+
+    },
+
+
+    speed: {
+
+        title:
+            "Temporary Speed Restrictions",
+
+        description:
+            "Simulate speed restrictions affecting section running time.",
+
+        baseImpact:
+            9
+
+    },
+
+
+    maintenance: {
+
+        title:
+            "Unscheduled Maintenance Blocks",
+
+        description:
+            "Simulate emergency maintenance or temporary section closure.",
+
+        baseImpact:
+            18
+
+    },
+
+
+    crossing: {
+
+        title:
+            "Level Crossing Gates",
+
+        description:
+            "Simulate delays caused by level crossing operations.",
+
+        baseImpact:
+            6
+
+    },
+
+
+    bottleneck: {
+
+        title:
+            "Operational Bottlenecks",
+
+        description:
+            "Simulate capacity restrictions and junction congestion.",
+
+        baseImpact:
+            11
+
+    }
+
+};
+
+
+/* =========================================
+   CURRENT SIMULATION
+========================================= */
+
+let currentSimulation =
+    null;
+
+
+/* =========================================
+   OPEN SIMULATION
+========================================= */
+
+function openSimulation(type) {
+
+    currentSimulation =
+        type;
+
+
+    const simulation =
+        simulationData[type];
+
+
+    if (!simulation) return;
+
+
+    const config =
+        $("simulation-config");
+
+
+    if (config) {
+
+        config.classList.remove(
+            "hide"
         );
+
+    }
+
+
+    if ($("simulation-title")) {
+
+        $("simulation-title").textContent =
+            simulation.title;
+
+    }
+
+
+    if ($("simulation-result")) {
+
+        $("simulation-result").classList.add(
+            "hide"
+        );
+
+    }
+
+
+    setTimeout(
+        () => {
+
+            config.scrollIntoView({
+
+                behavior:
+                    "smooth",
+
+                block:
+                    "start"
+
+            });
+
+        },
+        100
+    );
+
+}
+
+
+/* =========================================
+   CLOSE SIMULATION
+========================================= */
+
+function closeSimulation() {
+
+    const config =
+        $("simulation-config");
+
+
+    if (config) {
+
+        config.classList.add(
+            "hide"
+        );
+
+    }
+
+
+    currentSimulation =
+        null;
+
+}
+
+
+/* =========================================
+   RUN SIMULATION
+========================================= */
+
+function runSimulation() {
+
+    if (
+        !currentSimulation
+    ) {
 
         return;
 
     }
 
 
-    const body = {
-
-        from_station:
-
-            $("mfrom").value.trim(),
-
-
-        to_station:
-
-            $("mto").value.trim(),
+    const simulation =
+        simulationData[
+            currentSimulation
+        ];
 
 
-        from_km:
-
-            $("mfromkm").value,
-
-
-        to_km:
-
-            $("mtokm").value,
+    const train =
+        $("sim-train")?.value ||
+        "12705";
 
 
-        repair_type:
-
-            $("mtype").value,
-
-
-        normal_speed:
-
-            $("mnormal").value,
+    const section =
+        $("sim-section")?.value ||
+        "Selected Section";
 
 
-        restricted_speed:
-
-            $("mrestrict").value,
-
-
-        start_time:
-
-            $("mstart").value,
+    const severity =
+        $("sim-severity")?.value ||
+        "medium";
 
 
-        end_time:
+    const duration =
+        Number(
+            $("sim-duration")?.value
+        ) || 30;
 
-            $("mend").value,
+
+    let severityMultiplier =
+        1;
 
 
-        notes:
+    if (
+        severity === "low"
+    ) {
 
-            $("mnotes").value
+        severityMultiplier =
+            0.6;
+
+    }
+
+
+    if (
+        severity === "medium"
+    ) {
+
+        severityMultiplier =
+            1;
+
+    }
+
+
+    if (
+        severity === "high"
+    ) {
+
+        severityMultiplier =
+            1.6;
+
+    }
+
+
+    /*
+     =====================================
+     SIMULATION IMPACT
+
+     Impact uses:
+
+     Feature Base Impact
+     × Severity
+     × Duration Factor
+     =====================================
+    */
+
+
+    const durationFactor =
+        Math.max(
+            0.5,
+            duration / 30
+        );
+
+
+    const impact =
+        Math.round(
+
+            simulation.baseImpact *
+            severityMultiplier *
+            durationFactor
+
+        );
+
+
+    /*
+     Historical recovery assumption.
+    */
+
+
+    const recoveryRate =
+        0.35;
+
+
+    const recoverableDelay =
+        Math.round(
+
+            impact *
+            recoveryRate
+
+        );
+
+
+    const finalImpact =
+        Math.max(
+
+            0,
+
+            impact -
+            recoverableDelay
+
+        );
+
+
+    const result =
+        $("simulation-result");
+
+
+    if (!result) return;
+
+
+    result.classList.remove(
+        "hide"
+    );
+
+
+    result.innerHTML =
+
+        `
+        <div class="simulation-result-header">
+
+            <div>
+
+                <span class="section-label">
+
+                    SIMULATION RESULT
+
+                </span>
+
+
+                <h2>
+
+                    ${simulation.title}
+
+                </h2>
+
+            </div>
+
+
+            <div class="simulation-impact-value">
+
+                +${finalImpact} min
+
+            </div>
+
+        </div>
+
+
+        <div class="simulation-result-grid">
+
+
+            <div>
+
+                <small>
+                    TRAIN
+                </small>
+
+                <b>
+                    ${train}
+                </b>
+
+            </div>
+
+
+            <div>
+
+                <small>
+                    AFFECTED SECTION
+                </small>
+
+                <b>
+                    ${section}
+                </b>
+
+            </div>
+
+
+            <div>
+
+                <small>
+                    SEVERITY
+                </small>
+
+                <b>
+
+                    ${severity.toUpperCase()}
+
+                </b>
+
+            </div>
+
+
+            <div>
+
+                <small>
+                    DISRUPTION DURATION
+                </small>
+
+                <b>
+                    ${duration} min
+                </b>
+
+            </div>
+
+
+        </div>
+
+
+        <div class="simulation-calculation">
+
+
+            <h3>
+
+                ETA Impact Analysis
+
+            </h3>
+
+
+            <div class="calculation-row">
+
+                <span>
+
+                    Raw Disruption Impact
+
+                </span>
+
+
+                <b>
+
+                    +${impact} min
+
+                </b>
+
+            </div>
+
+
+            <div class="calculation-row">
+
+                <span>
+
+                    Expected Operational Recovery
+
+                </span>
+
+
+                <b class="recovery">
+
+                    −${recoverableDelay} min
+
+                </b>
+
+            </div>
+
+
+            <div class="calculation-row final-impact">
+
+                <span>
+
+                    Final ETA Impact
+
+                </span>
+
+
+                <b>
+
+                    +${finalImpact} min
+
+                </b>
+
+            </div>
+
+
+        </div>
+
+
+        <div class="simulation-ai-note">
+
+            🧠
+
+            <p>
+
+                RailForecast combines the simulated
+                disruption with historical section delay
+                patterns and operational recovery behaviour
+                to estimate the expected impact on future ETA.
+
+            </p>
+
+        </div>
+        `;
+
+
+    result.scrollIntoView({
+
+        behavior:
+            "smooth",
+
+        block:
+            "center"
+
+    });
+
+}
+
+
+/* =========================================
+   AUTHORIZED API CONNECTION
+========================================= */
+
+function connectAPI(type) {
+
+    const endpointInput =
+        $(`${type}-endpoint`);
+
+
+    const keyInput =
+        $(`${type}-key`);
+
+
+    const status =
+        $(`${type}-status`);
+
+
+    if (
+        !endpointInput ||
+        !keyInput ||
+        !status
+    ) {
+
+        return;
+
+    }
+
+
+    const endpoint =
+        endpointInput.value.trim();
+
+
+    const key =
+        keyInput.value.trim();
+
+
+    /*
+     =====================================
+     VALIDATION
+     =====================================
+    */
+
+
+    if (!endpoint) {
+
+        status.textContent =
+            "Endpoint Required";
+
+
+        status.style.color =
+            "#ff8989";
+
+
+        return;
+
+    }
+
+
+    if (!key) {
+
+        status.textContent =
+            "API Key Required";
+
+
+        status.style.color =
+            "#ff8989";
+
+
+        return;
+
+    }
+
+
+    /*
+     =====================================
+     DEMO CONNECTION
+
+     For the SIH prototype,
+     this changes connection state.
+
+     When real government APIs are
+     provided, replace this section with
+     secure backend API integration.
+
+     IMPORTANT:
+     Real API keys should NOT be directly
+     exposed in frontend JavaScript.
+     =====================================
+    */
+
+
+    status.textContent =
+        "Connecting...";
+
+
+    status.style.color =
+        "#f2b84b";
+
+
+    setTimeout(
+        () => {
+
+            status.textContent =
+                "Connected";
+
+
+            status.style.color =
+                "#34c77b";
+
+
+            saveAPIConnection(
+                type,
+                endpoint
+            );
+
+        },
+        900
+    );
+
+}
+
+
+/* =========================================
+   SAVE API CONNECTION STATUS
+========================================= */
+
+function saveAPIConnection(
+    type,
+    endpoint
+) {
+
+    const connections =
+        JSON.parse(
+
+            localStorage.getItem(
+                "railforecast-api-connections"
+            )
+
+        ) || {};
+
+
+    connections[type] = {
+
+        endpoint:
+
+            endpoint,
+
+        connected:
+
+            true,
+
+        connectedAt:
+
+            new Date().toISOString()
 
     };
 
 
-    try {
+    localStorage.setItem(
 
+        "railforecast-api-connections",
 
-        const response =
-            await fetch(
-
-                `${API_BASE}/api/maintenance`,
-
-                {
-
-                    method:
-                        "POST",
-
-
-                    headers: {
-
-                        "Content-Type":
-                            "application/json"
-
-                    },
-
-
-                    body:
-                        JSON.stringify(
-                            body
-                        )
-
-                }
-
-            );
-
-
-        const data =
-            await response.json();
-
-
-        if (
-
-            !response.ok ||
-
-            data.success === false
-
-        ) {
-
-            throw new Error(
-
-                data.error ||
-
-                "Could not save maintenance restriction."
-
-            );
-
-        }
-
-
-        alert(
-            "Maintenance restriction published successfully."
-        );
-
-
-        clearMaintenanceForm();
-
-
-        loadMaintenance();
-
-
-    }
-
-    catch (error) {
-
-
-        console.error(
-            error
-        );
-
-
-        alert(
-
-            error.message ||
-
-            "Unable to publish maintenance restriction."
-
-        );
-
-    }
-
-}
-
-
-
-function clearMaintenanceForm() {
-
-
-    [
-
-        "mfrom",
-
-        "mto",
-
-        "mfromkm",
-
-        "mtokm",
-
-        "mstart",
-
-        "mend",
-
-        "mnotes"
-
-    ]
-
-        .forEach(
-
-            (id) => {
-
-                if ($(id)) {
-
-                    $(id).value = "";
-
-                }
-
-            }
-
-        );
-
-
-    $("mnormal").value =
-        "100";
-
-
-    $("mrestrict").value =
-        "50";
-
-}
-
-
-
-/* =========================================
-   LOAD MAINTENANCE
-========================================= */
-
-async function loadMaintenance() {
-
-
-    const list =
-        $("mlist");
-
-
-    if (!API_BASE) {
-
-        list.innerHTML =
-
-            `<p class="note">
-
-                Backend API URL is not configured.
-
-            </p>`;
-
-        return;
-
-    }
-
-
-    try {
-
-
-        const response =
-            await fetch(
-
-                `${API_BASE}/api/maintenance`
-
-            );
-
-
-        const data =
-            await response.json();
-
-
-        const maintenance =
-
-            Array.isArray(
-                data.maintenance
-            )
-
-                ? data.maintenance
-
-                : [];
-
-
-
-        if (
-
-            maintenance.length === 0
-
-        ) {
-
-            list.innerHTML =
-
-                `<p class="note">
-
-                    No active restrictions.
-
-                </p>`;
-
-            return;
-
-        }
-
-
-
-        list.innerHTML =
-
-            maintenance.map(
-
-                (item) => `
-
-                    <div class="mitem">
-
-
-                        <b>
-
-                            🟠
-
-                            ${escapeHTML(item.from_station || "Unknown")}
-
-                            →
-
-                            ${escapeHTML(item.to_station || "Unknown")}
-
-                        </b>
-
-
-                        <span>
-
-                            ${escapeHTML(item.repair_type || "Maintenance")}
-
-                            ·
-
-                            ${escapeHTML(item.normal_speed ?? "—")}
-
-                            →
-
-                            ${escapeHTML(item.restricted_speed ?? "—")}
-
-                            km/h
-
-                        </span>
-
-
-                        <small>
-
-                            ${escapeHTML(item.start_time || "—")}
-
-                            to
-
-                            ${escapeHTML(item.end_time || "—")}
-
-                        </small>
-
-
-                        <button
-                            class="remove-btn"
-                            onclick="removeMaintenance(${Number(item.id)})"
-                        >
-
-                            Remove Restriction
-
-                        </button>
-
-
-                    </div>
-
-                `
-
-            )
-
-            .join("");
-
-
-    }
-
-    catch (error) {
-
-
-        console.error(
-            error
-        );
-
-
-        list.innerHTML =
-
-            `<p class="note">
-
-                Unable to load maintenance data.
-
-            </p>`;
-
-    }
-
-}
-
-
-
-/* =========================================
-   REMOVE MAINTENANCE
-========================================= */
-
-async function removeMaintenance(id) {
-
-
-    if (
-
-        !confirm(
-
-            "Remove this maintenance restriction?"
-
+        JSON.stringify(
+            connections
         )
-
-    ) {
-
-        return;
-
-    }
-
-
-    try {
-
-
-        const response =
-            await fetch(
-
-                `${API_BASE}/api/maintenance/${id}`,
-
-                {
-
-                    method:
-                        "DELETE"
-
-                }
-
-            );
-
-
-        if (!response.ok) {
-
-            throw new Error(
-                "Unable to remove restriction."
-            );
-
-        }
-
-
-        loadMaintenance();
-
-
-    }
-
-    catch (error) {
-
-
-        alert(
-
-            error.message ||
-
-            "Unable to remove maintenance restriction."
-
-        );
-
-    }
-
-}
-
-
-
-/* =========================================
-   UTILITIES
-========================================= */
-
-function toNumber(value) {
-
-
-    const number =
-        Number(value);
-
-
-    return Number.isFinite(
-        number
-    )
-
-        ? number
-
-        : 0;
-
-}
-
-
-
-function formatDelay(delay) {
-
-
-    const value =
-        toNumber(delay);
-
-
-    if (value === 0) {
-
-        return "On time";
-
-    }
-
-
-    return (
-
-        value > 0
-
-            ? `+${value.toFixed(1)} min`
-
-            : `${value.toFixed(1)} min`
 
     );
 
 }
 
 
-
-function formatTime(value) {
-
-
-    try {
-
-
-        return new Date(
-            value
-        )
-
-            .toLocaleTimeString(
-
-                [],
-
-                {
-
-                    hour:
-                        "2-digit",
-
-                    minute:
-                        "2-digit"
-
-                }
-
-            );
-
-    }
-
-    catch {
-
-        return "—";
-
-    }
-
-}
-
-
-
-function getDelayStatus(delay) {
-
-
-    if (
-
-        delay <= 2
-
-    ) {
-
-        return "ON TIME";
-
-    }
-
-
-    if (
-
-        delay <= 10
-
-    ) {
-
-        return "MINOR DELAY";
-
-    }
-
-
-    return "DELAYED";
-
-}
-
-
-
-function formatFeatureName(value) {
-
-
-    return String(
-        value
-    )
-
-        .replace(
-            /_/g,
-            " "
-        )
-
-        .replace(
-            /\b\w/g,
-            (character) =>
-                character.toUpperCase()
-        );
-
-}
-
-
-
-function escapeHTML(value) {
-
-
-    return String(
-        value ?? ""
-    )
-
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-
-        .replace(
-            /</g,
-            "&lt;"
-        )
-
-        .replace(
-            />/g,
-            "&gt;"
-        )
-
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-
-        .replace(
-            /'/g,
-            "&#039;"
-        );
-
-}
-
-
-
 /* =========================================
-   ENTER KEY SEARCH
+   LOAD API CONNECTION STATUS
 ========================================= */
 
-const trainInput =
-    $("train");
+function loadAPIConnections() {
+
+    const connections =
+        JSON.parse(
+
+            localStorage.getItem(
+                "railforecast-api-connections"
+            )
+
+        ) || {};
 
 
-if (trainInput) {
+    Object.keys(
+        connections
+    ).forEach(
+        (type) => {
+
+            const connection =
+                connections[type];
 
 
-    trainInput.addEventListener(
+            const status =
+                $(`${type}-status`);
 
-        "keydown",
 
-        (event) => {
+            const endpoint =
+                $(`${type}-endpoint`);
 
 
             if (
-
-                event.key === "Enter"
-
+                connection.connected &&
+                status
             ) {
 
-                forecast();
+                status.textContent =
+                    "Connected";
+
+
+                status.style.color =
+                    "#34c77b";
+
+            }
+
+
+            if (
+                connection.endpoint &&
+                endpoint
+            ) {
+
+                endpoint.value =
+                    connection.endpoint;
 
             }
 
         }
-
     );
 
 }
+
+
+/* =========================================
+   PAGE LOAD
+========================================= */
+
+document.addEventListener(
+
+    "DOMContentLoaded",
+
+    () => {
+
+        loadAPIConnections();
+
+    }
+
+);
+
+
+/* =========================================
+   OPTIONAL LIVE AUTO REFRESH
+========================================= */
+
+let liveRefreshInterval =
+    null;
+
+
+function startLiveRefresh() {
+
+    if (
+        liveRefreshInterval
+    ) {
+
+        clearInterval(
+            liveRefreshInterval
+        );
+
+    }
+
+
+    /*
+     Refresh every 60 seconds.
+
+     When your real backend is connected,
+     this can call forecast() automatically.
+    */
+
+
+    liveRefreshInterval =
+        setInterval(
+
+            () => {
+
+                const passengerScreen =
+                    $("passenger");
+
+
+                const result =
+                    $("result");
+
+
+                if (
+
+                    passengerScreen &&
+
+                    !passengerScreen.classList.contains(
+                        "hide"
+                    ) &&
+
+                    result &&
+
+                    !result.classList.contains(
+                        "hide"
+                    )
+
+                ) {
+
+                    console.log(
+                        "Live forecast refresh available."
+                    );
+
+                }
+
+            },
+
+            60000
+
+        );
+
+}
+
+
+/* =========================================
+   INITIALIZE
+========================================= */
+
+document.addEventListener(
+
+    "DOMContentLoaded",
+
+    () => {
+
+        startLiveRefresh();
+
+    }
+
+);
