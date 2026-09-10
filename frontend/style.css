@@ -3535,3 +3535,2053 @@ select option {
 
 
 }
+
+/* =========================================================
+   LIVE RAILWAY NETWORK — CURVED TRACK VISUALIZATION
+   (Combines station list + live ETA forecast into one
+   flowing "where is my train" style route map)
+========================================================= */
+
+.railway-network-card {
+
+    padding:
+        30px;
+
+    margin-bottom:
+        25px;
+
+    overflow:
+        hidden;
+
+}
+
+
+.network-live {
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    gap:
+        8px;
+
+    padding:
+        6px 12px;
+
+    border-radius:
+        999px;
+
+    background:
+        rgba(34, 197, 94, 0.1);
+
+    color:
+        var(--green);
+
+    font-size:
+        11px;
+
+    font-weight:
+        800;
+
+    letter-spacing:
+        1px;
+
+    white-space:
+        nowrap;
+
+    height:
+        fit-content;
+
+}
+
+
+.rail-network {
+
+    position:
+        relative;
+
+    width:
+        100%;
+
+    padding:
+        6px 0 10px;
+
+}
+
+
+.rail-network svg {
+
+    display:
+        block;
+
+    width:
+        100%;
+
+    height:
+        auto;
+
+    overflow:
+        visible;
+
+}
+
+
+.rail-track-glow {
+
+    fill:
+        none;
+
+    stroke:
+        var(--primary);
+
+    stroke-width:
+        14;
+
+    stroke-linecap:
+        round;
+
+    opacity:
+        0.08;
+
+}
+
+
+.rail-track-path {
+
+    fill:
+        none;
+
+    stroke:
+        url(#trackGradient);
+
+    stroke-width:
+        4;
+
+    stroke-linecap:
+        round;
+
+    filter:
+        drop-shadow(0 0 6px rgba(56, 189, 248, 0.25));
+
+}
+
+
+.station-dot-glow {
+
+    opacity:
+        0.16;
+
+}
+
+
+.station-dot-glow.status-good {
+
+    fill:
+        var(--green);
+
+}
+
+
+.station-dot-glow.status-mid {
+
+    fill:
+        var(--yellow);
+
+}
+
+
+.station-dot-glow.status-bad {
+
+    fill:
+        #fca5a5;
+
+}
+
+
+.station-dot {
+
+    stroke:
+        var(--bg-dark);
+
+    stroke-width:
+        3;
+
+    transition:
+        r 0.2s;
+
+}
+
+
+.station-dot.status-good {
+
+    fill:
+        var(--green);
+
+}
+
+
+.station-dot.status-mid {
+
+    fill:
+        var(--yellow);
+
+}
+
+
+.station-dot.status-bad {
+
+    fill:
+        #fca5a5;
+
+}
+
+
+.station-dot.current {
+
+    fill:
+        var(--primary);
+
+    filter:
+        drop-shadow(0 0 8px rgba(56, 189, 248, 0.9));
+
+}
+
+
+.network-station .station-label-name {
+
+    fill:
+        var(--text);
+
+    font-family:
+        inherit;
+
+    font-size:
+        13px;
+
+    font-weight:
+        700;
+
+}
+
+
+.network-station .station-label-code {
+
+    fill:
+        var(--muted);
+
+    font-family:
+        inherit;
+
+    font-size:
+        10.5px;
+
+}
+
+
+.network-station .station-label-eta {
+
+    font-family:
+        inherit;
+
+    font-size:
+        12px;
+
+    font-weight:
+        800;
+
+}
+
+
+.network-station .station-label-eta.status-good {
+
+    fill:
+        var(--green);
+
+}
+
+
+.network-station .station-label-eta.status-mid {
+
+    fill:
+        var(--yellow);
+
+}
+
+
+.network-station .station-label-eta.status-bad {
+
+    fill:
+        #fca5a5;
+
+}
+
+
+.current-network-station .station-label-name {
+
+    fill:
+        var(--primary);
+
+}
+
+
+.live-network-train {
+
+    transition:
+        transform 0.9s ease-in-out;
+
+}
+
+
+.live-train-ring {
+
+    fill:
+        none;
+
+    stroke:
+        var(--primary);
+
+    stroke-width:
+        2;
+
+    transform-origin:
+        center;
+
+    animation:
+        trainPulseRing 1.8s ease-out infinite;
+
+}
+
+
+.live-train-core {
+
+    fill:
+        var(--bg-dark);
+
+    stroke:
+        var(--primary);
+
+    stroke-width:
+        2.5;
+
+    filter:
+        drop-shadow(0 0 10px rgba(56, 189, 248, 0.85));
+
+}
+
+
+.live-train-icon {
+
+    font-size:
+        13px;
+
+}
+
+
+@keyframes trainPulseRing {
+
+    0% {
+
+        r:
+            9;
+
+        opacity:
+            0.7;
+
+    }
+
+    100% {
+
+        r:
+            24;
+
+        opacity:
+            0;
+
+    }
+
+}
+
+
+.network-legend {
+
+    display:
+        flex;
+
+    flex-wrap:
+        wrap;
+
+    gap:
+        20px;
+
+    margin-top:
+        18px;
+
+    padding-top:
+        18px;
+
+    border-top:
+        1px solid var(--border);
+
+}
+
+
+.legend-item {
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    gap:
+        8px;
+
+    color:
+        var(--muted);
+
+    font-size:
+        12px;
+
+    font-weight:
+        600;
+
+}
+
+
+.legend-dot {
+
+    width:
+        9px;
+
+    height:
+        9px;
+
+    border-radius:
+        50%;
+
+    display:
+        inline-block;
+
+}
+
+
+.legend-dot.legend-current {
+
+    background:
+        var(--primary);
+
+    box-shadow:
+        0 0 8px rgba(56, 189, 248, 0.85);
+
+}
+
+
+.legend-dot.legend-good {
+
+    background:
+        var(--green);
+
+}
+
+
+.legend-dot.legend-mid {
+
+    background:
+        var(--yellow);
+
+}
+
+
+.legend-dot.legend-bad {
+
+    background:
+        #fca5a5;
+
+}
+
+
+.no-data {
+
+    padding:
+        30px 10px;
+
+    text-align:
+        center;
+
+    color:
+        var(--muted);
+
+    font-size:
+        13px;
+
+}
+
+
+@media (max-width: 760px) {
+
+    .network-station .station-label-name {
+
+        font-size:
+            11px;
+
+    }
+
+    .network-station .station-label-code,
+    .network-station .station-label-eta {
+
+        font-size:
+            9.5px;
+
+    }
+
+}
+
+
+/* =========================================================
+   DEPARTMENT DASHBOARD HEADER
+========================================================= */
+
+.department-header {
+
+    position:
+        relative;
+
+    overflow:
+        hidden;
+
+    padding:
+        46px 25px 36px;
+
+    margin-bottom:
+        30px;
+
+    text-align:
+        center;
+
+    border-radius:
+        24px;
+
+    background:
+
+        radial-gradient(
+            circle at top,
+            rgba(56, 189, 248, 0.14),
+            transparent 60%
+        );
+
+}
+
+
+.department-header h1 {
+
+    margin:
+        12px 0;
+
+    font-size:
+        clamp(34px, 5vw, 54px);
+
+    letter-spacing:
+        1px;
+
+    background:
+
+        linear-gradient(
+            90deg,
+            white,
+            var(--primary),
+            var(--purple)
+        );
+
+    -webkit-background-clip:
+        text;
+
+    -webkit-text-fill-color:
+        transparent;
+
+}
+
+
+.department-header p {
+
+    max-width:
+        640px;
+
+    margin:
+        auto;
+
+    color:
+        var(--muted);
+
+    line-height:
+        1.7;
+
+}
+
+
+/* =========================================================
+   DEPARTMENT MAIN CARDS
+   (Simulation Center / Railway Authorized APIs)
+========================================================= */
+
+.department-main-grid {
+
+    display:
+        grid;
+
+    grid-template-columns:
+        repeat(2, 1fr);
+
+    gap:
+        24px;
+
+}
+
+
+.department-main-card {
+
+    position:
+        relative;
+
+    overflow:
+        hidden;
+
+    display:
+        grid;
+
+    grid-template-columns:
+        68px 1fr;
+
+    gap:
+        20px;
+
+    align-items:
+        start;
+
+    text-align:
+        left;
+
+    padding:
+        34px;
+
+    min-height:
+        200px;
+
+    color:
+        var(--text);
+
+    cursor:
+        pointer;
+
+    border:
+        1px solid var(--border);
+
+    border-radius:
+        24px;
+
+    background:
+
+        linear-gradient(
+            150deg,
+            rgba(20, 42, 67, 0.92),
+            rgba(7, 15, 27, 0.96)
+        );
+
+    box-shadow:
+        var(--shadow);
+
+    transition:
+        0.3s ease;
+
+}
+
+
+.department-main-card::before {
+
+    content:
+        "";
+
+    position:
+        absolute;
+
+    inset:
+        0;
+
+    opacity:
+        0;
+
+    transition:
+        0.35s;
+
+    pointer-events:
+        none;
+
+    background:
+
+        radial-gradient(
+            circle at top right,
+            rgba(56, 189, 248, 0.22),
+            transparent 55%
+        );
+
+}
+
+
+.department-main-card.api-main::before {
+
+    background:
+
+        radial-gradient(
+            circle at top right,
+            rgba(139, 92, 246, 0.22),
+            transparent 55%
+        );
+
+}
+
+
+.department-main-card:hover {
+
+    transform:
+        translateY(-8px);
+
+    border-color:
+        var(--border-blue);
+
+    box-shadow:
+        0 25px 60px rgba(0, 0, 0, 0.45),
+        0 0 40px rgba(56, 189, 248, 0.14);
+
+}
+
+
+.department-main-card.api-main:hover {
+
+    border-color:
+        rgba(139, 92, 246, 0.5);
+
+    box-shadow:
+        0 25px 60px rgba(0, 0, 0, 0.45),
+        0 0 40px rgba(139, 92, 246, 0.16);
+
+}
+
+
+.department-main-card:hover::before {
+
+    opacity:
+        1;
+
+}
+
+
+.department-main-icon {
+
+    position:
+        relative;
+
+    z-index:
+        1;
+
+    width:
+        68px;
+
+    height:
+        68px;
+
+    display:
+        grid;
+
+    place-items:
+        center;
+
+    border-radius:
+        18px;
+
+    font-size:
+        32px;
+
+    background:
+        rgba(56, 189, 248, 0.1);
+
+    border:
+        1px solid rgba(56, 189, 248, 0.2);
+
+}
+
+
+.department-main-card.api-main .department-main-icon {
+
+    background:
+        rgba(139, 92, 246, 0.12);
+
+    border-color:
+        rgba(139, 92, 246, 0.24);
+
+}
+
+
+.department-main-card h2 {
+
+    position:
+        relative;
+
+    z-index:
+        1;
+
+    margin:
+        4px 0 10px;
+
+    font-size:
+        22px;
+
+}
+
+
+.department-main-card p {
+
+    position:
+        relative;
+
+    z-index:
+        1;
+
+    margin:
+        0 0 18px;
+
+    color:
+        var(--muted);
+
+    line-height:
+        1.65;
+
+    font-size:
+        14px;
+
+}
+
+
+.department-action-arrow {
+
+    position:
+        relative;
+
+    z-index:
+        1;
+
+    display:
+        inline-block;
+
+    color:
+        var(--primary);
+
+    font-size:
+        13px;
+
+    font-weight:
+        800;
+
+    letter-spacing:
+        0.4px;
+
+}
+
+
+.department-main-card.api-main .department-action-arrow {
+
+    color:
+        var(--purple);
+
+}
+
+
+/* =========================================================
+   CARD TAG BADGE
+   (used across role cards, department cards, api cards)
+========================================================= */
+
+.card-tag {
+
+    display:
+        inline-block;
+
+    margin-bottom:
+        10px;
+
+    padding:
+        4px 10px;
+
+    color:
+        var(--primary);
+
+    font-size:
+        10px;
+
+    font-weight:
+        800;
+
+    letter-spacing:
+        1.1px;
+
+    border-radius:
+        999px;
+
+    background:
+        rgba(56, 189, 248, 0.1);
+
+    border:
+        1px solid rgba(56, 189, 248, 0.18);
+
+}
+
+
+/* =========================================================
+   SIMULATION CONFIGURATION PANEL
+========================================================= */
+
+.simulation-config {
+
+    margin-top:
+        36px;
+
+    padding:
+        32px;
+
+}
+
+
+.simulation-config .close-btn {
+
+    display:
+        grid;
+
+    place-items:
+        center;
+
+    width:
+        36px;
+
+    height:
+        36px;
+
+    flex-shrink:
+        0;
+
+    color:
+        var(--muted);
+
+    font-size:
+        15px;
+
+    cursor:
+        pointer;
+
+    border:
+        1px solid var(--border);
+
+    border-radius:
+        10px;
+
+    background:
+        rgba(255, 255, 255, 0.03);
+
+    transition:
+        0.2s ease;
+
+}
+
+
+.simulation-config .close-btn:hover {
+
+    color:
+        var(--text);
+
+    border-color:
+        var(--red);
+
+    background:
+        rgba(239, 68, 68, 0.1);
+
+}
+
+
+.simulation-form-grid {
+
+    display:
+        grid;
+
+    grid-template-columns:
+        repeat(auto-fill, minmax(220px, 1fr));
+
+    gap:
+        18px;
+
+    margin-bottom:
+        24px;
+
+    padding:
+        22px;
+
+    border-radius:
+        16px;
+
+    background:
+        rgba(3, 12, 23, 0.4);
+
+    border:
+        1px solid var(--border);
+
+}
+
+
+.simulation-input-group {
+
+    display:
+        flex;
+
+    flex-direction:
+        column;
+
+    gap:
+        8px;
+
+}
+
+
+.simulation-input-group label {
+
+    color:
+        var(--muted);
+
+    font-size:
+        12px;
+
+    font-weight:
+        700;
+
+    letter-spacing:
+        0.3px;
+
+    text-transform:
+        uppercase;
+
+}
+
+
+.simulation-run-btn {
+
+    width:
+        100%;
+
+    font-size:
+        15px;
+
+    text-align:
+        center;
+
+}
+
+
+/* =========================================================
+   SIMULATION RESULT
+========================================================= */
+
+.simulation-result {
+
+    margin-top:
+        26px;
+
+    padding:
+        28px;
+
+    border-radius:
+        18px;
+
+    background:
+
+        linear-gradient(
+            150deg,
+            rgba(15, 32, 52, 0.9),
+            rgba(6, 14, 26, 0.95)
+        );
+
+    border:
+        1px solid var(--border-blue);
+
+    box-shadow:
+        var(--glow);
+
+}
+
+
+.simulation-loading {
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    gap:
+        12px;
+
+    padding:
+        10px 4px;
+
+    color:
+        var(--muted);
+
+    font-size:
+        14px;
+
+}
+
+
+.mini-spinner {
+
+    width:
+        16px;
+
+    height:
+        16px;
+
+    border-radius:
+        50%;
+
+    border:
+        2px solid rgba(56, 189, 248, 0.2);
+
+    border-top-color:
+        var(--primary);
+
+    animation:
+        spin 0.8s linear infinite;
+
+}
+
+
+@keyframes spin {
+
+    to {
+
+        transform:
+            rotate(360deg);
+
+    }
+
+}
+
+
+.simulation-error {
+
+    padding:
+        16px 18px;
+
+    color:
+        #fca5a5;
+
+    border-radius:
+        12px;
+
+    background:
+        rgba(239, 68, 68, 0.08);
+
+    border:
+        1px solid rgba(239, 68, 68, 0.3);
+
+}
+
+
+.simulation-error b {
+
+    display:
+        block;
+
+    margin-bottom:
+        4px;
+
+    color:
+        #fecaca;
+
+}
+
+
+.simulation-result-header {
+
+    position:
+        relative;
+
+    margin-bottom:
+        20px;
+
+    padding-bottom:
+        18px;
+
+    border-bottom:
+        1px solid var(--border);
+
+}
+
+
+.simulation-result-header h2 {
+
+    margin:
+        6px 0 10px;
+
+}
+
+
+.simulation-source-tag {
+
+    display:
+        inline-block;
+
+    padding:
+        4px 10px;
+
+    color:
+        var(--cyan);
+
+    font-size:
+        11px;
+
+    font-weight:
+        700;
+
+    font-family:
+        "Courier New", monospace;
+
+    border-radius:
+        999px;
+
+    background:
+        rgba(34, 211, 238, 0.1);
+
+    border:
+        1px solid rgba(34, 211, 238, 0.22);
+
+}
+
+
+.simulation-impact-result {
+
+    display:
+        grid;
+
+    grid-template-columns:
+        auto 1fr;
+
+    align-items:
+        center;
+
+    gap:
+        24px;
+
+    margin-bottom:
+        22px;
+
+    padding:
+        20px;
+
+    border-radius:
+        14px;
+
+    background:
+        rgba(56, 189, 248, 0.06);
+
+    border:
+        1px solid rgba(56, 189, 248, 0.18);
+
+}
+
+
+.impact-value {
+
+    font-size:
+        clamp(30px, 4vw, 42px);
+
+    font-weight:
+        800;
+
+    color:
+        var(--primary);
+
+    white-space:
+        nowrap;
+
+}
+
+
+.simulation-impact-result b {
+
+    display:
+        block;
+
+    margin-bottom:
+        6px;
+
+}
+
+
+.simulation-impact-result p {
+
+    margin:
+        0;
+
+    color:
+        var(--muted);
+
+    font-size:
+        13px;
+
+    line-height:
+        1.6;
+
+}
+
+
+.simulation-impact-result code {
+
+    padding:
+        1px 6px;
+
+    font-size:
+        12px;
+
+    border-radius:
+        6px;
+
+    background:
+        rgba(255, 255, 255, 0.06);
+
+}
+
+
+.simulation-analysis {
+
+    display:
+        grid;
+
+    grid-template-columns:
+        repeat(auto-fit, minmax(150px, 1fr));
+
+    gap:
+        16px;
+
+    margin-bottom:
+        22px;
+
+}
+
+
+.simulation-analysis > div {
+
+    padding:
+        14px 16px;
+
+    border-radius:
+        12px;
+
+    background:
+        rgba(255, 255, 255, 0.03);
+
+    border:
+        1px solid var(--border);
+
+}
+
+
+.simulation-analysis small {
+
+    display:
+        block;
+
+    margin-bottom:
+        6px;
+
+    color:
+        var(--muted);
+
+    font-size:
+        10.5px;
+
+    font-weight:
+        800;
+
+    letter-spacing:
+        0.6px;
+
+}
+
+
+.simulation-analysis b {
+
+    font-size:
+        17px;
+
+}
+
+
+.delay-result {
+
+    color:
+        var(--orange);
+
+}
+
+
+.simulation-params {
+
+    margin-bottom:
+        22px;
+
+    padding:
+        20px;
+
+    border-radius:
+        14px;
+
+    background:
+        rgba(3, 12, 23, 0.45);
+
+    border:
+        1px solid var(--border);
+
+}
+
+
+.simulation-params-grid {
+
+    display:
+        grid;
+
+    grid-template-columns:
+        repeat(auto-fill, minmax(200px, 1fr));
+
+    gap:
+        10px 20px;
+
+    margin-top:
+        14px;
+
+}
+
+
+.param-row {
+
+    display:
+        flex;
+
+    justify-content:
+        space-between;
+
+    gap:
+        12px;
+
+    padding:
+        8px 0;
+
+    border-bottom:
+        1px dashed var(--border);
+
+    font-size:
+        13px;
+
+}
+
+
+.param-row span {
+
+    color:
+        var(--muted);
+
+}
+
+
+.param-row b {
+
+    text-align:
+        right;
+
+    text-transform:
+        capitalize;
+
+}
+
+
+.simulation-ai-note {
+
+    display:
+        flex;
+
+    align-items:
+        flex-start;
+
+    gap:
+        14px;
+
+    padding:
+        16px 18px;
+
+    border-radius:
+        14px;
+
+    background:
+        rgba(139, 92, 246, 0.08);
+
+    border:
+        1px solid rgba(139, 92, 246, 0.22);
+
+}
+
+
+.simulation-ai-note span {
+
+    font-size:
+        20px;
+
+}
+
+
+.simulation-ai-note p {
+
+    margin:
+        0;
+
+    color:
+        var(--muted);
+
+    font-size:
+        13px;
+
+    line-height:
+        1.65;
+
+}
+
+
+/* =========================================================
+   RAILWAY AUTHORIZED API PAGE
+========================================================= */
+
+.api-header {
+
+    position:
+        relative;
+
+    overflow:
+        hidden;
+
+    padding:
+        46px 25px 36px;
+
+    margin-bottom:
+        30px;
+
+    text-align:
+        center;
+
+    border-radius:
+        24px;
+
+    background:
+
+        radial-gradient(
+            circle at top,
+            rgba(139, 92, 246, 0.14),
+            transparent 60%
+        );
+
+}
+
+
+.api-header h1 {
+
+    margin:
+        12px 0;
+
+    font-size:
+        clamp(34px, 5vw, 54px);
+
+    background:
+
+        linear-gradient(
+            90deg,
+            white,
+            var(--purple),
+            var(--primary)
+        );
+
+    -webkit-background-clip:
+        text;
+
+    -webkit-text-fill-color:
+        transparent;
+
+}
+
+
+.api-header p {
+
+    max-width:
+        640px;
+
+    margin:
+        auto;
+
+    color:
+        var(--muted);
+
+    line-height:
+        1.7;
+
+}
+
+
+.api-status-overview {
+
+    margin-bottom:
+        26px;
+
+    padding:
+        28px;
+
+}
+
+
+.api-status-overview h2 {
+
+    margin:
+        6px 0 0;
+
+}
+
+
+.api-status-grid {
+
+    display:
+        grid;
+
+    grid-template-columns:
+        repeat(3, 1fr);
+
+    gap:
+        16px;
+
+    margin-top:
+        20px;
+
+}
+
+
+.api-status-item {
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    gap:
+        14px;
+
+    padding:
+        16px 18px;
+
+    border-radius:
+        14px;
+
+    background:
+        rgba(255, 255, 255, 0.03);
+
+    border:
+        1px solid var(--border);
+
+}
+
+
+.api-status-item > span {
+
+    display:
+        grid;
+
+    place-items:
+        center;
+
+    width:
+        42px;
+
+    height:
+        42px;
+
+    font-size:
+        20px;
+
+    border-radius:
+        12px;
+
+    background:
+        rgba(56, 189, 248, 0.1);
+
+}
+
+
+.api-status-item b {
+
+    display:
+        block;
+
+    margin-bottom:
+        3px;
+
+}
+
+
+.api-status-item small {
+
+    color:
+        var(--muted);
+
+    font-size:
+        12px;
+
+}
+
+
+.api-card-icon {
+
+    width:
+        58px;
+
+    height:
+        58px;
+
+    display:
+        grid;
+
+    place-items:
+        center;
+
+    margin-bottom:
+        16px;
+
+    border-radius:
+        16px;
+
+    font-size:
+        26px;
+
+    background:
+        rgba(139, 92, 246, 0.12);
+
+    border:
+        1px solid rgba(139, 92, 246, 0.2);
+
+}
+
+
+.api-card .section-label {
+
+    display:
+        block;
+
+    margin-bottom:
+        6px;
+
+}
+
+
+.api-card h2 {
+
+    margin:
+        0 0 8px;
+
+}
+
+
+.api-card > p {
+
+    margin:
+        0 0 20px;
+
+    color:
+        var(--muted);
+
+    line-height:
+        1.6;
+
+    font-size:
+        13px;
+
+}
+
+
+.api-card label {
+
+    display:
+        block;
+
+    margin:
+        14px 0 6px;
+
+    color:
+        var(--muted);
+
+    font-size:
+        11.5px;
+
+    font-weight:
+        700;
+
+    letter-spacing:
+        0.4px;
+
+    text-transform:
+        uppercase;
+
+}
+
+
+.api-card .primary-btn {
+
+    width:
+        100%;
+
+    margin-top:
+        20px;
+
+}
+
+
+/* =========================================================
+   RAILFORECAST INTELLIGENCE PIPELINE (DATA FLOW)
+========================================================= */
+
+.data-flow {
+
+    margin-top:
+        26px;
+
+    padding:
+        30px;
+
+}
+
+
+.flow-grid {
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        center;
+
+    flex-wrap:
+        wrap;
+
+    gap:
+        16px;
+
+    margin-top:
+        10px;
+
+}
+
+
+.flow-node {
+
+    display:
+        flex;
+
+    flex-direction:
+        column;
+
+    align-items:
+        center;
+
+    gap:
+        6px;
+
+    min-width:
+        140px;
+
+    padding:
+        22px 16px;
+
+    text-align:
+        center;
+
+    font-size:
+        26px;
+
+    border-radius:
+        16px;
+
+    background:
+        rgba(56, 189, 248, 0.06);
+
+    border:
+        1px solid rgba(56, 189, 248, 0.18);
+
+}
+
+
+.flow-node b {
+
+    font-size:
+        14px;
+
+}
+
+
+.flow-node small {
+
+    color:
+        var(--muted);
+
+    font-size:
+        11.5px;
+
+}
+
+
+.flow-arrow {
+
+    color:
+        var(--primary);
+
+    font-size:
+        22px;
+
+    font-weight:
+        800;
+
+}
+
+
+.flow-engine {
+
+    display:
+        flex;
+
+    flex-direction:
+        column;
+
+    align-items:
+        center;
+
+    gap:
+        6px;
+
+    min-width:
+        180px;
+
+    padding:
+        26px 20px;
+
+    text-align:
+        center;
+
+    font-size:
+        30px;
+
+    border-radius:
+        18px;
+
+    background:
+
+        linear-gradient(
+            145deg,
+            rgba(139, 92, 246, 0.18),
+            rgba(56, 189, 248, 0.1)
+        );
+
+    border:
+        1px solid rgba(139, 92, 246, 0.35);
+
+    box-shadow:
+        0 0 30px rgba(139, 92, 246, 0.18);
+
+}
+
+
+.flow-engine b {
+
+    font-size:
+        15px;
+
+}
+
+
+.flow-engine span {
+
+    color:
+        var(--muted);
+
+    font-size:
+        11.5px;
+
+}
+
+
+/* =========================================================
+   RESPONSIVE - DEPARTMENT / SIMULATION / API
+========================================================= */
+
+@media (max-width: 900px) {
+
+    .department-main-grid {
+
+        grid-template-columns:
+            1fr;
+
+    }
+
+    .api-status-grid {
+
+        grid-template-columns:
+            1fr;
+
+    }
+
+    .simulation-impact-result {
+
+        grid-template-columns:
+            1fr;
+
+        text-align:
+            center;
+
+    }
+
+}
+
+
+@media (max-width: 620px) {
+
+    .department-main-card {
+
+        grid-template-columns:
+            1fr;
+
+    }
+
+    .flow-grid {
+
+        flex-direction:
+            column;
+
+    }
+
+    .flow-arrow {
+
+        transform:
+            rotate(90deg);
+
+    }
+
+}
