@@ -1,8 +1,2436 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RailForecast</title><link rel="stylesheet" href="style.css"></head><body>
-<header><div class="brand" onclick="home()">🚆 <b>RailForecast</b><small>AI-Powered Dynamic Train ETA</small></div><span>● LIVE INTELLIGENCE</span></header>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        RailForecast | Smarter Journeys. On Time.
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/chart.js"
+    ></script>
+
+</head>
+
+
+<body>
+
+
+<!-- =========================================
+     TOP NAVIGATION
+========================================= -->
+
+<header class="topbar">
+
+    <div
+        class="brand"
+        onclick="home()"
+    >
+
+        <div class="brand-icon">
+            🚆
+        </div>
+
+        <div>
+
+            <h2>
+                RailForecast
+            </h2>
+
+            <p>
+                Smarter Journeys. On Time.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div class="header-right">
+
+        <div class="live-indicator">
+
+            <span class="live-dot"></span>
+
+            LIVE INTELLIGENCE
+
+        </div>
+
+
+        <button
+            class="header-home"
+            onclick="home()"
+        >
+            Home
+        </button>
+
+    </div>
+
+</header>
+
+
+
 <main>
-<section id="home" class="screen hero"><div class="train">🚆</div><h1>Know where your train is.<br><em>Know where it will be.</em></h1><p>Dynamic ETA predictions using live running data, historical patterns and Random Forest ML.</p><div class="roles"><button onclick="passenger()">👤<h2>Passenger</h2><p>Track your train and see predicted upcoming ETAs.</p></button><button onclick="department()">🏢<h2>Railway Department</h2><p>Inspect delay propagation and section intelligence.</p></button></div></section>
-<section id="passenger" class="screen hide"><button class="back" onclick="home()">← Back</button><h2>Passenger · Find your train</h2><div class="card"><label>Train number or name</label><div class="search"><input id="train" value="12705"><button onclick="forecast()">🔍 Find Train</button></div><div class="filters"><div><label>From station (optional)</label><input id="from"></div><div><label>To station (optional)</label><input id="to"></div><div><label>Journey date</label><input id="date" type="date"></div></div><div id="err" class="error hide"></div></div><div id="result" class="hide"><div class="card status"><div><small>LIVE TRAIN STATUS</small><h2 id="title"></h2><p id="route"></p></div><b id="badge">LIVE</b></div><div class="metrics"><div><small>Current station</small><b id="cur"></b></div><div><small>Current delay</small><b id="delay"></b></div><div><small>Next station</small><b id="next"></b></div><div><small>Updated</small><b id="updated"></b></div></div><h2>AI Future Forecast</h2><div id="timeline" class="card"></div><p class="note">Live API → current delay → historical section patterns → Random Forest V2 → sequential future ETA</p></div></section>
-<section id="department" class="screen hide"><button class="back" onclick="home()">← Back</button><div class="card dept"><div>🏢</div><h2>Railway Department</h2><p>Manage operational intelligence and track restrictions.</p><button onclick="passenger()">Open Train Forecast</button><button onclick="maintenance()">🛠 Track Maintenance</button></div></section>
-<section id="maintenance" class="screen hide"><button class="back" onclick="department()">← Back</button><h2>🛠 Track Maintenance Department</h2><p class="note">Publish active repair and temporary speed restrictions. Active restrictions are automatically included in future ETA calculations.</p><div class="card maintform"><div class="filters"><div><label>From station</label><input id="mfrom" placeholder="Vijayawada"></div><div><label>To station</label><input id="mto" placeholder="Madhira"></div><div><label>Repair type</label><select id="mtype"><option>Track repair</option><option>Track renewal</option><option>Emergency repair</option><option>Maintenance work</option></select></div><div><label>From KM</label><input id="mfromkm" type="number" step="0.001"></div><div><label>To KM</label><input id="mtokm" type="number" step="0.001"></div><div><label>Normal speed (km/h)</label><input id="mnormal" type="number" value="100"></div><div><label>Restricted speed (km/h)</label><input id="mrestrict" type="number" value="50"></div><div><label>Start (ISO time)</label><input id="mstart" type="datetime-local"></div><div><label>End (ISO time)</label><input id="mend" type="datetime-local"></div></div><label>Notes</label><textarea id="mnotes" placeholder="Repair details..."></textarea><button class="publish" onclick="addMaintenance()">🚧 Publish Restriction</button></div><h2>Active Restrictions</h2><div id="mlist" class="card mlist"></div></section>
-</main><script src="config.js"></script><script src="script.js"></script></body></html>
+
+
+<!-- =========================================
+     HOME PAGE
+========================================= -->
+
+<section
+    id="home"
+    class="screen hero-screen"
+>
+
+
+    <div class="hero-background">
+
+        <div class="network-line line-one"></div>
+
+        <div class="network-line line-two"></div>
+
+        <div class="network-line line-three"></div>
+
+    </div>
+
+
+
+    <div class="hero-content">
+
+
+        <div class="hero-badge">
+
+            <span class="live-dot"></span>
+
+            AI-POWERED RAILWAY INTELLIGENCE
+
+        </div>
+
+
+        <div class="hero-train">
+            🚆
+        </div>
+
+
+        <h1>
+
+            Smarter railway journeys.
+
+            <span>
+                Predicted before they happen.
+            </span>
+
+        </h1>
+
+
+        <p class="hero-description">
+
+            RailForecast combines live train movement,
+            historical railway intelligence, machine learning
+            and operational disruption analysis to deliver
+            dynamic ETA predictions.
+
+        </p>
+
+
+
+        <div class="role-grid">
+
+
+            <!-- PASSENGER -->
+
+            <button
+                class="role-card passenger-role"
+                onclick="passenger()"
+            >
+
+                <div class="role-icon">
+                    👤
+                </div>
+
+
+                <div>
+
+                    <span class="card-tag">
+                        PASSENGER
+                    </span>
+
+
+                    <h2>
+                        Track Your Journey
+                    </h2>
+
+
+                    <p>
+
+                        View live train movement,
+                        journey progress and AI-powered
+                        station-by-station ETA predictions.
+
+                    </p>
+
+                </div>
+
+
+                <span class="role-arrow">
+                    →
+                </span>
+
+            </button>
+
+
+
+            <!-- DEPARTMENT -->
+
+            <button
+                class="role-card department-role"
+                onclick="department()"
+            >
+
+                <div class="role-icon">
+                    🏢
+                </div>
+
+
+                <div>
+
+                    <span class="card-tag">
+                        RAILWAY OPERATIONS
+                    </span>
+
+
+                    <h2>
+                        Railway Department
+                    </h2>
+
+
+                    <p>
+
+                        Simulate railway disruptions,
+                        analyze operational impacts and
+                        connect authorized railway APIs.
+
+                    </p>
+
+                </div>
+
+
+                <span class="role-arrow">
+                    →
+                </span>
+
+            </button>
+
+
+        </div>
+
+
+    </div>
+
+
+</section>
+
+
+
+
+
+<!-- =========================================
+     PASSENGER SEARCH PAGE
+========================================= -->
+
+<section
+    id="passenger"
+    class="screen hide"
+>
+
+
+    <button
+        class="back-btn"
+        onclick="home()"
+    >
+        ← Back
+    </button>
+
+
+
+    <div class="page-top">
+
+
+        <span class="section-label">
+            PASSENGER INTELLIGENCE
+        </span>
+
+
+        <h1 class="page-title">
+            Find Your Train
+        </h1>
+
+
+        <p class="page-subtitle">
+
+            Track live train movement and receive
+            AI-powered dynamic ETA predictions.
+
+        </p>
+
+
+    </div>
+
+
+
+    <!-- TRAIN SEARCH -->
+
+    <div class="search-card card">
+
+
+        <div class="search-title">
+
+            <div>
+
+                <span class="section-label">
+                    TRAIN SEARCH
+                </span>
+
+
+                <h2>
+                    Search your journey
+                </h2>
+
+            </div>
+
+        </div>
+
+
+
+        <label>
+            Train Number or Name
+        </label>
+
+
+
+        <div class="search-row">
+
+
+            <input
+                id="train"
+                value="12705"
+                placeholder="Example: 12705"
+            >
+
+
+            <button
+                class="primary-btn"
+                onclick="forecast()"
+            >
+
+                🔍 Find Train
+
+            </button>
+
+
+        </div>
+
+
+
+        <div class="filters">
+
+
+            <div>
+
+                <label>
+
+                    From Station
+
+                    <span>
+                        (Optional)
+                    </span>
+
+                </label>
+
+
+                <input
+                    id="from"
+                    placeholder="Example: Guntur"
+                >
+
+            </div>
+
+
+
+            <div>
+
+                <label>
+
+                    Your Destination
+
+                    <span>
+                        (Optional)
+                    </span>
+
+                </label>
+
+
+                <input
+                    id="to"
+                    placeholder="Example: Secunderabad"
+                >
+
+            </div>
+
+
+
+            <div>
+
+                <label>
+                    Journey Date
+                </label>
+
+
+                <input
+                    id="date"
+                    type="date"
+                >
+
+            </div>
+
+
+        </div>
+
+
+
+        <div
+            id="err"
+            class="error hide"
+        ></div>
+
+
+    </div>
+
+
+
+    <!-- LOADING -->
+
+    <div
+        id="loading"
+        class="loading-card hide"
+    >
+
+        <div class="loader"></div>
+
+
+        <div>
+
+            <b>
+                Generating Dynamic ETA Forecast
+            </b>
+
+
+            <p>
+
+                Analyzing live train movement,
+                historical patterns and AI predictions...
+
+            </p>
+
+        </div>
+
+
+    </div>
+
+
+
+    <!-- =====================================
+         PASSENGER RESULTS
+    ====================================== -->
+
+    <div
+        id="result"
+        class="hide"
+    >
+
+
+
+        <!-- TRAIN STATUS -->
+
+        <div class="train-overview card">
+
+
+            <div class="train-visual">
+
+                🚆
+
+            </div>
+
+
+
+            <div class="train-main-info">
+
+
+                <span class="section-label">
+
+                    LIVE TRAIN STATUS
+
+                </span>
+
+
+                <h2
+                    id="title"
+                >
+
+                    Train 12705
+
+                </h2>
+
+
+                <p
+                    id="route"
+                >
+
+                    Loading route...
+
+                </p>
+
+
+            </div>
+
+
+
+            <div class="live-status-badge">
+
+                <span class="live-dot"></span>
+
+                LIVE
+
+            </div>
+
+
+        </div>
+
+
+
+        <!-- METRICS -->
+
+        <div class="metrics-grid">
+
+
+            <div class="metric-card">
+
+                <span class="metric-icon">
+                    📍
+                </span>
+
+
+                <div>
+
+                    <small>
+                        CURRENT STATION
+                    </small>
+
+
+                    <b id="cur">
+                        —
+                    </b>
+
+                </div>
+
+            </div>
+
+
+
+            <div class="metric-card">
+
+                <span class="metric-icon">
+                    ⏱
+                </span>
+
+
+                <div>
+
+                    <small>
+                        CURRENT DELAY
+                    </small>
+
+
+                    <b id="delay">
+                        —
+                    </b>
+
+                </div>
+
+            </div>
+
+
+
+            <div class="metric-card">
+
+                <span class="metric-icon">
+                    ➜
+                </span>
+
+
+                <div>
+
+                    <small>
+                        NEXT STATION
+                    </small>
+
+
+                    <b id="next">
+                        —
+                    </b>
+
+                </div>
+
+            </div>
+
+
+
+            <div class="metric-card">
+
+                <span class="metric-icon">
+                    ↻
+                </span>
+
+
+                <div>
+
+                    <small>
+                        LAST UPDATED
+                    </small>
+
+
+                    <b id="updated">
+                        —
+                    </b>
+
+                </div>
+
+            </div>
+
+
+        </div>
+
+
+
+        <!-- =====================================
+             LIVE RAILWAY NETWORK
+        ====================================== -->
+
+        <div class="card railway-network-card">
+
+
+            <div class="section-heading">
+
+
+                <div>
+
+                    <span class="section-label">
+
+                        LIVE RAILWAY INTELLIGENCE
+
+                    </span>
+
+
+                    <h2>
+
+                        Live Railway Network
+
+                    </h2>
+
+
+                    <p>
+
+                        Live train movement across
+                        the active railway route.
+
+                    </p>
+
+                </div>
+
+
+                <div class="network-live">
+
+                    <span class="live-dot"></span>
+
+                    LIVE NETWORK
+
+                </div>
+
+
+            </div>
+
+
+
+            <div
+                id="rail-network"
+                class="rail-network"
+            >
+
+
+                <!-- STATION 1 -->
+
+                <div class="network-station">
+
+                    <div class="station-node">
+
+                        GNT
+
+                    </div>
+
+
+                    <span>
+                        Guntur
+                    </span>
+
+                </div>
+
+
+
+                <!-- TRACK -->
+
+                <div class="rail-track">
+
+                    <div class="track-line"></div>
+
+
+                    <div
+                        class="moving-train train-a"
+                    >
+                        🚆
+                    </div>
+
+
+                    <div
+                        class="moving-train train-b"
+                    >
+                        🚆
+                    </div>
+
+
+                </div>
+
+
+
+                <!-- STATION 2 -->
+
+                <div class="network-station">
+
+                    <div class="station-node">
+
+                        MGL
+
+                    </div>
+
+
+                    <span>
+                        Mangalagiri
+                    </span>
+
+                </div>
+
+
+
+                <div class="rail-track">
+
+                    <div class="track-line"></div>
+
+
+                    <div
+                        class="moving-train train-c"
+                    >
+                        🚆
+                    </div>
+
+
+                </div>
+
+
+
+                <!-- STATION 3 -->
+
+                <div class="network-station">
+
+                    <div class="station-node">
+
+                        BZA
+
+                    </div>
+
+
+                    <span>
+                        Vijayawada
+                    </span>
+
+                </div>
+
+
+
+                <div class="rail-track">
+
+                    <div class="track-line"></div>
+
+
+                    <div
+                        id="selected-network-train"
+                        class="selected-network-train"
+                    >
+                        🚆
+                    </div>
+
+
+                </div>
+
+
+
+                <!-- STATION 4 -->
+
+                <div class="network-station active-station">
+
+                    <div class="station-node">
+
+                        KMM
+
+                    </div>
+
+
+                    <span>
+                        Khammam
+                    </span>
+
+                </div>
+
+
+
+                <div class="rail-track">
+
+                    <div class="track-line"></div>
+
+
+                    <div
+                        class="moving-train train-d"
+                    >
+                        🚆
+                    </div>
+
+
+                </div>
+
+
+
+                <!-- STATION 5 -->
+
+                <div class="network-station">
+
+                    <div class="station-node">
+
+                        DKJ
+
+                    </div>
+
+
+                    <span>
+                        Dornakal
+                    </span>
+
+                </div>
+
+
+
+                <div class="rail-track">
+
+                    <div class="track-line"></div>
+
+
+                    <div
+                        class="moving-train train-e"
+                    >
+                        🚆
+                    </div>
+
+
+                </div>
+
+
+
+                <!-- STATION 6 -->
+
+                <div class="network-station">
+
+                    <div class="station-node">
+
+                        SC
+
+                    </div>
+
+
+                    <span>
+                        Secunderabad
+                    </span>
+
+                </div>
+
+
+            </div>
+
+
+
+            <div class="network-legend">
+
+
+                <span>
+
+                    🚆 Your Train
+
+                </span>
+
+
+                <span>
+
+                    🚆 Other Active Trains
+
+                </span>
+
+
+                <span>
+
+                    ● Railway Station
+
+                </span>
+
+
+            </div>
+
+
+        </div>
+
+
+
+        <!-- =====================================
+             JOURNEY PROGRESS
+        ====================================== -->
+
+        <div class="card journey-card">
+
+
+            <div class="section-heading">
+
+
+                <div>
+
+                    <span class="section-label">
+
+                        YOUR JOURNEY
+
+                    </span>
+
+
+                    <h2>
+
+                        Journey Progress
+
+                    </h2>
+
+                </div>
+
+
+                <div
+                    id="journey-percent"
+                    class="journey-percent"
+                >
+
+                    —
+
+                </div>
+
+
+            </div>
+
+
+
+            <div class="journey-route">
+
+
+                <div
+                    id="journey-from"
+                    class="journey-station"
+                >
+
+                    —
+
+                </div>
+
+
+                <div
+                    id="journey-to"
+                    class="journey-station destination"
+                >
+
+                    —
+
+                </div>
+
+
+            </div>
+
+
+
+            <div class="progress-track">
+
+
+                <div
+                    id="journey-progress"
+                    class="progress-fill"
+                    style="width:0%"
+                ></div>
+
+
+
+                <div
+                    id="progress-marker"
+                    class="progress-marker"
+                    style="left:0%"
+                >
+
+                    🚆
+
+                </div>
+
+
+            </div>
+
+
+
+            <p
+                id="journey-status"
+                class="journey-status"
+            >
+
+                Waiting for train information...
+
+            </p>
+
+
+        </div>
+
+
+
+        <!-- =====================================
+             ACTIVE DELAY IMPACTS
+        ====================================== -->
+
+        <div
+            id="impact-section"
+            class="card impact-card hide"
+        >
+
+
+            <div class="section-heading">
+
+
+                <div>
+
+                    <span class="section-label">
+
+                        REAL-TIME INTELLIGENCE
+
+                    </span>
+
+
+                    <h2>
+
+                        Active Delay Impacts
+
+                    </h2>
+
+                </div>
+
+
+                <div
+                    id="total-impact"
+                    class="impact-total"
+                >
+
+                    +0 min
+
+                </div>
+
+
+            </div>
+
+
+
+            <div
+                id="impact-summary"
+                class="impact-summary"
+            ></div>
+
+
+
+            <div
+                id="active-events"
+                class="event-list"
+            ></div>
+
+
+        </div>
+
+
+
+        <!-- =====================================
+             ETA ACCURACY
+        ====================================== -->
+
+        <div class="card chart-card">
+
+
+            <div class="section-heading">
+
+
+                <div>
+
+                    <span class="section-label">
+
+                        MODEL PERFORMANCE
+
+                    </span>
+
+
+                    <h2>
+
+                        ETA Accuracy Improvement
+
+                    </h2>
+
+
+                    <p>
+
+                        Comparison between Dynamic AI ETA
+                        and the baseline ETA model.
+
+                    </p>
+
+                </div>
+
+
+            </div>
+
+
+
+            <div class="chart-wrapper">
+
+                <canvas
+                    id="accuracyChart"
+                ></canvas>
+
+            </div>
+
+
+        </div>
+
+
+
+        <!-- =====================================
+             FUTURE FORECAST
+        ====================================== -->
+
+        <div class="forecast-heading">
+
+
+            <span class="section-label">
+
+                AI PREDICTION
+
+            </span>
+
+
+            <h2>
+
+                Future ETA Forecast
+
+            </h2>
+
+
+            <p>
+
+                Predicted station-by-station arrival
+                information based on live and historical data.
+
+            </p>
+
+
+        </div>
+
+
+
+        <div
+            id="timeline"
+            class="forecast-list card"
+        ></div>
+
+
+
+        <!-- FORECAST METHOD -->
+
+        <div class="forecast-method card">
+
+
+            <div class="method-icon">
+                🧠
+            </div>
+
+
+            <div>
+
+                <h3>
+
+                    How RailForecast calculates ETA
+
+                </h3>
+
+
+                <p>
+
+                    Live train movement →
+
+                    Historical railway patterns →
+
+                    Real-time operational correction →
+
+                    Random Forest delay prediction →
+
+                    Sequential future ETA forecast.
+
+                </p>
+
+            </div>
+
+
+        </div>
+
+
+
+        <!-- MODEL NOTE -->
+
+        <div class="model-note">
+
+
+            <span>
+                🤖
+            </span>
+
+
+            <p>
+
+                <b>
+                    Current Model: Random Forest.
+                </b>
+
+                RailForecast currently uses Random Forest
+                due to limited historical railway data.
+                As larger datasets become available,
+                advanced models such as XGBoost can further
+                improve prediction accuracy.
+
+            </p>
+
+
+        </div>
+
+
+    </div>
+
+
+</section>
+
+
+
+
+
+<!-- =========================================
+     RAILWAY DEPARTMENT
+========================================= -->
+
+<section
+    id="department"
+    class="screen hide"
+>
+
+
+    <button
+        class="back-btn"
+        onclick="home()"
+    >
+
+        ← Back
+
+    </button>
+
+
+
+    <div class="department-header">
+
+
+        <span class="section-label">
+
+            RAILWAY OPERATIONS
+
+        </span>
+
+
+        <h1>
+
+            Railway Intelligence Center
+
+        </h1>
+
+
+        <p>
+
+            Simulate operational disruptions,
+            analyze ETA impacts and connect
+            authorized railway intelligence APIs.
+
+        </p>
+
+
+    </div>
+
+
+
+    <div class="department-main-grid">
+
+
+        <!-- SIMULATION -->
+
+        <button
+            class="department-main-card simulation-main"
+            onclick="simulation()"
+        >
+
+
+            <div class="department-main-icon">
+
+                🎮
+
+            </div>
+
+
+            <div>
+
+                <span class="card-tag">
+
+                    PREDICTIVE ANALYSIS
+
+                </span>
+
+
+                <h2>
+
+                    Simulation Center
+
+                </h2>
+
+
+                <p>
+
+                    Simulate real-world railway disruptions
+                    and analyze their impact on train movement
+                    and dynamic ETA.
+
+                </p>
+
+
+                <span class="department-action-arrow">
+
+                    Open Simulation →
+
+                </span>
+
+            </div>
+
+
+        </button>
+
+
+
+        <!-- API -->
+
+        <button
+            class="department-main-card api-main"
+            onclick="authorizedAPI()"
+        >
+
+
+            <div class="department-main-icon">
+
+                🔐
+
+            </div>
+
+
+            <div>
+
+                <span class="card-tag">
+
+                    DATA INTEGRATION
+
+                </span>
+
+
+                <h2>
+
+                    Railway Authorized APIs
+
+                </h2>
+
+
+                <p>
+
+                    Connect telemetry, asset and alert
+                    intelligence sources to enhance
+                    real-time railway forecasting.
+
+                </p>
+
+
+                <span class="department-action-arrow">
+
+                    Manage APIs →
+
+                </span>
+
+            </div>
+
+
+        </button>
+
+
+    </div>
+
+
+</section>
+
+
+
+
+
+<!-- =========================================
+     SIMULATION PAGE
+========================================= -->
+
+<section
+    id="simulation"
+    class="screen hide"
+>
+
+
+    <button
+        class="back-btn"
+        onclick="department()"
+    >
+
+        ← Back to Department
+
+    </button>
+
+
+
+    <div class="simulation-header">
+
+
+        <span class="section-label">
+
+            RAILWAY INTELLIGENCE LAB
+
+        </span>
+
+
+        <h1>
+
+            SIMULATION
+
+        </h1>
+
+
+        <p>
+
+            Simulate real-world railway disruptions
+            and analyze their impact on train movement
+            and ETA.
+
+        </p>
+
+
+    </div>
+
+
+
+    <!-- SIMULATION CARDS -->
+
+    <div class="simulation-grid">
+
+
+        <button
+            class="simulation-card signal-card"
+            onclick="openSimulation('signal')"
+        >
+
+            <div class="simulation-icon">
+                🚦
+            </div>
+
+
+            <h2>
+                Signal Points
+            </h2>
+
+
+            <p>
+
+                Simulate signal malfunction
+                and its impact on train movement.
+
+            </p>
+
+
+            <span>
+                Select Simulation →
+            </span>
+
+        </button>
+
+
+
+        <button
+            class="simulation-card congestion-card"
+            onclick="openSimulation('congestion')"
+        >
+
+            <div class="simulation-icon">
+                🚆
+            </div>
+
+
+            <h2>
+                Congestion on Busy Routes
+            </h2>
+
+
+            <p>
+
+                Simulate increased railway
+                traffic and route congestion.
+
+            </p>
+
+
+            <span>
+                Select Simulation →
+            </span>
+
+        </button>
+
+
+
+        <button
+            class="simulation-card preceding-card"
+            onclick="openSimulation('preceding')"
+        >
+
+            <div class="simulation-icon">
+                ⏱️
+            </div>
+
+
+            <h2>
+                Delays in Preceding Trains
+            </h2>
+
+
+            <p>
+
+                Analyze delay propagation
+                from preceding trains.
+
+            </p>
+
+
+            <span>
+                Select Simulation →
+            </span>
+
+        </button>
+
+
+
+        <button
+            class="simulation-card speed-card"
+            onclick="openSimulation('speed')"
+        >
+
+            <div class="simulation-icon">
+                ⚡
+            </div>
+
+
+            <h2>
+                Temporary Speed Restrictions
+            </h2>
+
+
+            <p>
+
+                Simulate temporary speed
+                limitations on railway sections.
+
+            </p>
+
+
+            <span>
+                Select Simulation →
+            </span>
+
+        </button>
+
+
+
+        <button
+            class="simulation-card maintenance-card"
+            onclick="openSimulation('maintenance')"
+        >
+
+            <div class="simulation-icon">
+                🛠️
+            </div>
+
+
+            <h2>
+                Unscheduled Maintenance Blocks
+            </h2>
+
+
+            <p>
+
+                Analyze emergency maintenance
+                and infrastructure restrictions.
+
+            </p>
+
+
+            <span>
+                Select Simulation →
+            </span>
+
+        </button>
+
+
+
+        <button
+            class="simulation-card crossing-card"
+            onclick="openSimulation('crossing')"
+        >
+
+            <div class="simulation-icon">
+                🚧
+            </div>
+
+
+            <h2>
+                Level Crossing Gates
+            </h2>
+
+
+            <p>
+
+                Simulate operational delays
+                caused by level crossings.
+
+            </p>
+
+
+            <span>
+                Select Simulation →
+            </span>
+
+        </button>
+
+
+
+        <button
+            class="simulation-card bottleneck-card"
+            onclick="openSimulation('bottleneck')"
+        >
+
+            <div class="simulation-icon">
+                🔄
+            </div>
+
+
+            <h2>
+                Operational Bottlenecks
+            </h2>
+
+
+            <p>
+
+                Simulate junction congestion
+                and operational capacity issues.
+
+            </p>
+
+
+            <span>
+                Select Simulation →
+            </span>
+
+        </button>
+
+
+    </div>
+
+
+
+    <!-- SIMULATION CONFIGURATION -->
+
+    <div
+        id="simulation-config"
+        class="simulation-config card hide"
+    >
+
+
+        <div class="section-heading">
+
+
+            <div>
+
+                <span class="section-label">
+
+                    SIMULATION CONFIGURATION
+
+                </span>
+
+
+                <h2
+                    id="simulation-title"
+                >
+
+                    Configure Simulation
+
+                </h2>
+
+            </div>
+
+
+            <button
+                class="close-btn"
+                onclick="closeSimulation()"
+            >
+
+                ✕
+
+            </button>
+
+
+        </div>
+
+
+
+        <div class="simulation-form-grid">
+
+
+            <div>
+
+                <label>
+
+                    Train Number
+
+                </label>
+
+
+                <input
+                    id="sim-train"
+                    value="12705"
+                >
+
+            </div>
+
+
+
+            <div>
+
+                <label>
+
+                    Affected Section
+
+                </label>
+
+
+                <select id="sim-section">
+
+                    <option>
+                        Vijayawada → Madhira
+                    </option>
+
+                    <option>
+                        Madhira → Khammam
+                    </option>
+
+                    <option>
+                        Khammam → Dornakal
+                    </option>
+
+                    <option>
+                        Warangal → Kazipet
+                    </option>
+
+                </select>
+
+            </div>
+
+
+
+            <div>
+
+                <label>
+
+                    Severity
+
+                </label>
+
+
+                <select id="sim-severity">
+
+                    <option value="low">
+                        Low
+                    </option>
+
+                    <option value="medium">
+                        Medium
+                    </option>
+
+                    <option value="high">
+                        High
+                    </option>
+
+                </select>
+
+            </div>
+
+
+
+            <div>
+
+                <label>
+
+                    Expected Duration (minutes)
+
+                </label>
+
+
+                <input
+                    id="sim-duration"
+                    type="number"
+                    value="30"
+                >
+
+            </div>
+
+
+        </div>
+
+
+
+        <button
+            class="primary-btn simulation-run-btn"
+            onclick="runSimulation()"
+        >
+
+            ▶ Run Simulation
+
+        </button>
+
+
+
+        <!-- RESULT -->
+
+        <div
+            id="simulation-result"
+            class="simulation-result hide"
+        ></div>
+
+
+    </div>
+
+
+</section>
+
+
+
+
+
+<!-- =========================================
+     AUTHORIZED API PAGE
+========================================= -->
+
+<section
+    id="authorized-api"
+    class="screen hide"
+>
+
+
+    <button
+        class="back-btn"
+        onclick="department()"
+    >
+
+        ← Back to Department
+
+    </button>
+
+
+
+    <div class="api-header">
+
+
+        <span class="section-label">
+
+            SECURE DATA INTEGRATION
+
+        </span>
+
+
+        <h1>
+
+            Railway Authorized APIs
+
+        </h1>
+
+
+        <p>
+
+            Connect authorized railway intelligence
+            systems to enhance real-time operational
+            awareness and dynamic ETA forecasting.
+
+        </p>
+
+
+    </div>
+
+
+
+    <!-- API STATUS -->
+
+    <div class="api-status-overview card">
+
+
+        <div>
+
+            <span class="section-label">
+
+                CONNECTION STATUS
+
+            </span>
+
+
+            <h2>
+
+                Railway Data Intelligence
+
+            </h2>
+
+        </div>
+
+
+        <div class="api-status-grid">
+
+
+            <div class="api-status-item">
+
+                <span>
+                    📡
+                </span>
+
+
+                <div>
+
+                    <b>
+                        Telemetry
+                    </b>
+
+
+                    <small
+                        id="telemetry-status"
+                    >
+
+                        Not Connected
+
+                    </small>
+
+                </div>
+
+            </div>
+
+
+
+            <div class="api-status-item">
+
+                <span>
+                    🏗️
+                </span>
+
+
+                <div>
+
+                    <b>
+                        Asset
+                    </b>
+
+
+                    <small
+                        id="asset-status"
+                    >
+
+                        Not Connected
+
+                    </small>
+
+                </div>
+
+            </div>
+
+
+
+            <div class="api-status-item">
+
+                <span>
+                    🚨
+                </span>
+
+
+                <div>
+
+                    <b>
+                        Alert
+                    </b>
+
+
+                    <small
+                        id="alert-status"
+                    >
+
+                        Not Connected
+
+                    </small>
+
+                </div>
+
+            </div>
+
+
+        </div>
+
+
+    </div>
+
+
+
+    <!-- API CARDS -->
+
+    <div class="api-grid">
+
+
+        <!-- TELEMETRY -->
+
+        <div class="api-card card">
+
+
+            <div class="api-card-icon">
+                📡
+            </div>
+
+
+            <span class="section-label">
+
+                LIVE MOVEMENT DATA
+
+            </span>
+
+
+            <h2>
+
+                Telemetry API
+
+            </h2>
+
+
+            <p>
+
+                Connect live train telemetry,
+                movement, location, speed and
+                operational status information.
+
+            </p>
+
+
+
+            <label>
+
+                API Endpoint
+
+            </label>
+
+
+            <input
+                id="telemetry-endpoint"
+                placeholder="https://api.example.com/telemetry"
+            >
+
+
+
+            <label>
+
+                API Key
+
+            </label>
+
+
+            <input
+                id="telemetry-key"
+                type="password"
+                placeholder="Enter authorized API key"
+            >
+
+
+
+            <button
+                class="primary-btn"
+                onclick="connectAPI('telemetry')"
+            >
+
+                Connect Telemetry API
+
+            </button>
+
+
+        </div>
+
+
+
+        <!-- ASSET -->
+
+        <div class="api-card card">
+
+
+            <div class="api-card-icon">
+                🏗️
+            </div>
+
+
+            <span class="section-label">
+
+                INFRASTRUCTURE DATA
+
+            </span>
+
+
+            <h2>
+
+                Asset API
+
+            </h2>
+
+
+            <p>
+
+                Connect railway infrastructure,
+                signal, track and equipment
+                condition information.
+
+            </p>
+
+
+
+            <label>
+
+                API Endpoint
+
+            </label>
+
+
+            <input
+                id="asset-endpoint"
+                placeholder="https://api.example.com/assets"
+            >
+
+
+
+            <label>
+
+                API Key
+
+            </label>
+
+
+            <input
+                id="asset-key"
+                type="password"
+                placeholder="Enter authorized API key"
+            >
+
+
+
+            <button
+                class="primary-btn"
+                onclick="connectAPI('asset')"
+            >
+
+                Connect Asset API
+
+            </button>
+
+
+        </div>
+
+
+
+        <!-- ALERT -->
+
+        <div class="api-card card">
+
+
+            <div class="api-card-icon">
+                🚨
+            </div>
+
+
+            <span class="section-label">
+
+                DISRUPTION INTELLIGENCE
+
+            </span>
+
+
+            <h2>
+
+                Alert API
+
+            </h2>
+
+
+            <p>
+
+                Connect operational alerts,
+                signal failures, disruptions and
+                railway emergency notifications.
+
+            </p>
+
+
+
+            <label>
+
+                API Endpoint
+
+            </label>
+
+
+            <input
+                id="alert-endpoint"
+                placeholder="https://api.example.com/alerts"
+            >
+
+
+
+            <label>
+
+                API Key
+
+            </label>
+
+
+            <input
+                id="alert-key"
+                type="password"
+                placeholder="Enter authorized API key"
+            >
+
+
+
+            <button
+                class="primary-btn"
+                onclick="connectAPI('alert')"
+            >
+
+                Connect Alert API
+
+            </button>
+
+
+        </div>
+
+
+    </div>
+
+
+
+    <!-- DATA FLOW -->
+
+    <div class="data-flow card">
+
+
+        <div class="section-heading">
+
+
+            <div>
+
+                <span class="section-label">
+
+                    RAILFORECAST INTELLIGENCE PIPELINE
+
+                </span>
+
+
+                <h2>
+
+                    Data → Intelligence → ETA
+
+                </h2>
+
+            </div>
+
+
+        </div>
+
+
+
+        <div class="flow-grid">
+
+
+            <div class="flow-node">
+
+                📡
+
+                <b>
+                    Telemetry API
+                </b>
+
+                <small>
+                    Live Train Movement
+                </small>
+
+            </div>
+
+
+
+            <div class="flow-arrow">
+                →
+            </div>
+
+
+
+            <div class="flow-node">
+
+                🏗️
+
+                <b>
+                    Asset API
+                </b>
+
+                <small>
+                    Infrastructure Status
+                </small>
+
+            </div>
+
+
+
+            <div class="flow-arrow">
+                →
+            </div>
+
+
+
+            <div class="flow-node">
+
+                🚨
+
+                <b>
+                    Alert API
+                </b>
+
+                <small>
+                    Disruption Intelligence
+                </small>
+
+            </div>
+
+
+
+            <div class="flow-arrow">
+                ↓
+            </div>
+
+
+
+            <div class="flow-engine">
+
+                🧠
+
+                <b>
+                    RailForecast AI Engine
+                </b>
+
+
+                <span>
+
+                    Dynamic ETA Prediction
+
+                </span>
+
+            </div>
+
+
+        </div>
+
+
+    </div>
+
+
+</section>
+
+
+</main>
+
+
+
+<!-- =========================================
+     CONFIG
+========================================= -->
+
+<script src="config.js"></script>
+
+
+<!-- =========================================
+     JAVASCRIPT
+========================================= -->
+
+<script src="script.js"></script>
+
+
+</body>
+
+</html>
