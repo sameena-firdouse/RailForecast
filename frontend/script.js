@@ -1655,9 +1655,20 @@ function renderForecastTimeline(
         station => {
 
 
+            // FIX: forecastData items are the backend's
+            // `predictions` records - per-SECTION legs with
+            // from_station/to_station/predicted_eta/etc. - not
+            // a flat station shape with .station/.delay/.eta.
+            // Because of the safe `||`/`??` fallbacks this never
+            // threw, it just silently rendered every row as
+            // "Unknown Station" / "--" / "On time", which is why
+            // nothing LIVE ever appeared even once the API call
+            // itself started succeeding.
             const delay =
 
                 Number(
+
+                    station.predicted_delay_min ??
 
                     station.delay ??
 
@@ -1713,8 +1724,8 @@ function renderForecastTimeline(
 
             if (
 
-                status ===
-                "Current"
+                status === "Current" ||
+                status === "SLIGHT DELAY"
 
             ) {
 
@@ -1726,13 +1737,24 @@ function renderForecastTimeline(
 
             if (
 
-                status ===
-                "Upcoming"
+                status === "Upcoming"
 
             ) {
 
                 statusClass =
                     "status-mid";
+
+            }
+
+
+            if (
+
+                status === "DELAYED"
+
+            ) {
+
+                statusClass =
+                    "status-bad";
 
             }
 
@@ -1777,6 +1799,8 @@ function renderForecastTimeline(
 
                         ${
 
+                            station.to_station ||
+
                             station.station ||
 
                             station.station_name ||
@@ -1791,6 +1815,8 @@ function renderForecastTimeline(
                     <div class="station-code">
 
                         ${
+
+                            station.to_code ||
 
                             station.code ||
 
@@ -1811,6 +1837,8 @@ function renderForecastTimeline(
 
                         ${
 
+                            station.predicted_eta ||
+
                             station.predicted ||
 
                             station.predicted_time ||
@@ -1829,6 +1857,8 @@ function renderForecastTimeline(
                         Scheduled:
 
                         ${
+
+                            station.scheduled_eta ||
 
                             station.scheduled ||
 
