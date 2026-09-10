@@ -2540,9 +2540,9 @@ function renderAccuracyChart() {
 
                     labels: [
 
-                        "Baseline ETA",
+                        "Baseline ETA MAE",
 
-                        "Dynamic AI ETA"
+                        "Dynamic AI ETA MAE"
 
                     ],
 
