@@ -1113,13 +1113,19 @@ async function forecast() {
 
 
         renderRailwayNetwork(
-            liveStationForecast,
+            withCurrentOriginStation(
+                liveStationForecast,
+                liveTrainData
+            ),
             liveTrainData
         );
 
 
         updateLiveTrainPositionFromAPI(
-            liveStationForecast,
+            withCurrentOriginStation(
+                liveStationForecast,
+                liveTrainData
+            ),
             liveTrainData
         );
 
@@ -2119,6 +2125,124 @@ function renderForecastTimeline(
    RENDER LIVE RAILWAY NETWORK
 ========================================= */
 
+/* =========================================
+   INCLUDE THE TRAIN'S CURRENT / ORIGIN
+   STATION AS A REAL NODE ON THE NETWORK
+
+   The backend's forecast list only contains
+   the stations AHEAD of the train (each
+   entry's "to_station"), because it is
+   forecasting arrivals - it never includes
+   the station the train is currently at or
+   departing from. That meant the network
+   diagram and the live position marker had
+   no node to represent Guntur (or whichever
+   station the train is actually at right
+   now), so the marker defaulted to the very
+   first upcoming station instead - making it
+   look like the train had already reached
+   Mangalagiri when it may still be on its
+   way there from Guntur.
+
+   This wraps the real forecast data with one
+   extra leading node built from the first
+   entry's "from_station"/"from_code" (the
+   train's real current station), so the
+   diagram and the live marker both correctly
+   start there and animate towards the next
+   station as section_progress increases.
+========================================= */
+
+function withCurrentOriginStation(
+    stationForecast,
+    train
+) {
+
+    if (
+        !Array.isArray(stationForecast) ||
+        stationForecast.length === 0
+    ) {
+
+        return stationForecast;
+
+    }
+
+    const first =
+        stationForecast[0];
+
+    const originCode =
+        first.from_code ||
+        first.fromCode ||
+        "";
+
+    const originName =
+        first.from_station ||
+        first.fromStation ||
+        "";
+
+    if (!originName) {
+
+        return stationForecast;
+
+    }
+
+    // Defensive: don't duplicate a node if
+    // the origin is somehow already the
+    // first "to" station in the list.
+    if (
+        originCode &&
+        first.to_code === originCode
+    ) {
+
+        return stationForecast;
+
+    }
+
+    const trainDelay =
+        Number(
+            (train &&
+                (train.delay ??
+                    train.delayMinutes)) ||
+            0
+        );
+
+    const originStatus =
+        trainDelay > 10
+            ? "DELAYED"
+            : trainDelay > 2
+                ? "SLIGHT DELAY"
+                : "ON TIME";
+
+    const originNode = {
+
+        to_code:
+            originCode,
+
+        to_station:
+            originName,
+
+        scheduled_eta:
+            "--",
+
+        predicted_eta:
+            "At Station",
+
+        predicted_delay_min:
+            trainDelay,
+
+        status:
+            originStatus
+
+    };
+
+    return [
+        originNode,
+        ...stationForecast
+    ];
+
+}
+
+
 function renderRailwayNetwork(
     stations = [],
     train = {}
@@ -2540,9 +2664,9 @@ function renderAccuracyChart() {
 
                     labels: [
 
-                        "Baseline ETA MAE",
+                        "Baseline ETA",
 
-                        "Dynamic AI ETA MAE"
+                        "Dynamic AI ETA"
 
                     ],
 
@@ -3952,7 +4076,10 @@ function startLiveRefresh() {
 
                     renderRailwayNetwork(
 
-                        liveStationForecast,
+                        withCurrentOriginStation(
+                            liveStationForecast,
+                            liveTrainData
+                        ),
 
                         liveTrainData
 
@@ -3961,7 +4088,10 @@ function startLiveRefresh() {
 
                     updateLiveTrainPositionFromAPI(
 
-                        liveStationForecast,
+                        withCurrentOriginStation(
+                            liveStationForecast,
+                            liveTrainData
+                        ),
 
                         liveTrainData
 
