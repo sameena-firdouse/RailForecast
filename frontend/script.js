@@ -19,7 +19,7 @@ const API_BASE =
     window.location.hostname === "localhost" ||
     window.location.hostname === "127.0.0.1"
         ? "http://127.0.0.1:5000"
-        : (window.RAILFORECAST_API || "");
+        : "";
 
 
 /* =========================================
@@ -54,14 +54,13 @@ async function loadLiveForecast(
     date
 ) {
 
-    const dateParam =
-        date
-            ? `?date=${encodeURIComponent(date)}`
-            : "";
-
+    // FIX: backend route is GET /api/forecast/<train> (train is a
+    // path segment, not a query param). The previous
+    // `/api/forecast?train=...` URL matched no Flask route and
+    // 404'd on every single call.
     const url =
         apiUrl(
-            `/api/forecast/${encodeURIComponent(trainNumber)}${dateParam}`
+            `/api/forecast/${encodeURIComponent(trainNumber)}${date ? `?date=${encodeURIComponent(date)}` : ""}`
         );
 
     console.log(
@@ -138,21 +137,6 @@ const railwaySections = [
 
 /* =========================================
    SIMULATION FEATURE DEFINITIONS
-
-   IMPORTANT:
-   Every field id below matches EXACTLY the
-   input parameter name read by the real
-   backend calculator for this feature
-   (backend/services/<feature>.py), and
-   "backendFeature" matches the "feature"
-   key expected by
-   backend/adapters/simulation_mapper.py
-   (POST /api/simulation/event).
-
-   This means the values entered here are
-   sent as-is to the same calculation
-   engine used by live Railway Authorized
-   APIs — nothing is faked on the frontend.
 ========================================= */
 
 const simulationFeatures = {
@@ -160,7 +144,6 @@ const simulationFeatures = {
 
     /* =====================================
        SIGNAL POINTS
-       -> backend/services/signal_halt.py
     ===================================== */
 
     signal: {
@@ -171,26 +154,28 @@ const simulationFeatures = {
         description:
             "Simulate signal malfunction and operational signal holds.",
 
-        backendFeature:
-            "signal_halt",
-
         fields: [
 
             {
-                id: "section",
+                id: "sim-train",
+                label: "Train Number",
+                type: "text",
+                value: "12705"
+            },
+
+            {
+                id: "sim-section",
                 label: "Affected Section",
                 type: "select",
                 options: railwaySections
             },
 
             {
-                id: "signal_status",
-                label: "Signal Status",
+                id: "signal-status",
+                label: "Signal Condition",
                 type: "select",
 
                 options: [
-
-                    "Normal",
 
                     "Red Signal Hold",
 
@@ -204,48 +189,10 @@ const simulationFeatures = {
             },
 
             {
-                id: "severity",
-                label: "Severity",
-                type: "select",
-                options: ["low", "medium", "high", "critical"]
-            },
-
-            {
-                id: "expected_deviation_min",
-                label: "Expected Deviation (minutes)",
+                id: "signal-delay",
+                label: "Expected Signal Delay (minutes)",
                 type: "number",
-                value: "15",
-                numeric: true
-            },
-
-            {
-                id: "normal_impact_min",
-                label: "Normal Impact Baseline (minutes)",
-                type: "number",
-                value: "2",
-                numeric: true
-            },
-
-            {
-                id: "alternate_route_available",
-                label: "Alternate Route Available",
-                type: "select",
-                options: ["No", "Yes"],
-                boolean: true
-            },
-
-            {
-                id: "halt_start_time",
-                label: "Halt Start Time",
-                type: "datetime-local"
-            },
-
-            {
-                id: "current_impact_min",
-                label: "Current Impact Override (minutes, optional)",
-                type: "number",
-                value: "0",
-                numeric: true
+                value: "15"
             }
 
         ]
@@ -255,7 +202,6 @@ const simulationFeatures = {
 
     /* =====================================
        CONGESTION
-       -> backend/services/congestion.py
     ===================================== */
 
     congestion: {
@@ -266,55 +212,43 @@ const simulationFeatures = {
         description:
             "Simulate congestion caused by increased railway traffic.",
 
-        backendFeature:
-            "congestion",
-
         fields: [
 
             {
-                id: "section",
+                id: "sim-train",
+                label: "Train Number",
+                type: "text",
+                value: "12705"
+            },
+
+            {
+                id: "sim-section",
                 label: "Congested Section",
                 type: "select",
                 options: railwaySections
             },
 
             {
-                id: "congestion_level",
-                label: "Congestion Level",
+                id: "traffic-level",
+                label: "Traffic Density",
                 type: "select",
-                options: ["low", "moderate", "high", "severe"]
+
+                options: [
+
+                    "Moderate",
+
+                    "High",
+
+                    "Severe"
+
+                ]
             },
 
             {
-                id: "trains_ahead",
+                id: "trains-count",
                 label: "Number of Trains Ahead",
                 type: "number",
-                value: "3",
-                numeric: true
-            },
-
-            {
-                id: "queue_waiting_time_min",
-                label: "Queue Waiting Time (minutes)",
-                type: "number",
-                value: "8",
-                numeric: true
-            },
-
-            {
-                id: "average_speed_kmph",
-                label: "Average Speed (km/h)",
-                type: "number",
-                value: "40",
-                numeric: true
-            },
-
-            {
-                id: "expected_clearance_time_min",
-                label: "Expected Clearance Time (minutes)",
-                type: "number",
-                value: "20",
-                numeric: true
+                value: "3"
             }
 
         ]
@@ -324,7 +258,6 @@ const simulationFeatures = {
 
     /* =====================================
        PRECEDING TRAIN DELAY
-       -> backend/services/preceding_train.py
     ===================================== */
 
     preceding: {
@@ -335,68 +268,34 @@ const simulationFeatures = {
         description:
             "Analyze delay propagation from preceding trains.",
 
-        backendFeature:
-            "preceding_train",
-
         fields: [
 
             {
-                id: "affected_train_id",
+                id: "sim-train",
                 label: "Your Train Number",
                 type: "text",
                 value: "12705"
             },
 
             {
-                id: "preceding_train_id",
+                id: "preceding-train",
                 label: "Preceding Train Number",
                 type: "text",
                 value: "12706"
             },
 
             {
-                id: "section",
+                id: "sim-section",
                 label: "Affected Section",
                 type: "select",
                 options: railwaySections
             },
 
             {
-                id: "preceding_train_location",
-                label: "Preceding Train Current Location",
-                type: "text",
-                value: ""
-            },
-
-            {
-                id: "preceding_train_delay_min",
+                id: "preceding-delay",
                 label: "Preceding Train Delay (minutes)",
                 type: "number",
-                value: "20",
-                numeric: true
-            },
-
-            {
-                id: "distance_ahead_km",
-                label: "Distance Ahead (km)",
-                type: "number",
-                value: "5",
-                numeric: true
-            },
-
-            {
-                id: "section_status",
-                label: "Section Status",
-                type: "select",
-                options: ["clear", "occupied", "congested", "blocked"]
-            },
-
-            {
-                id: "estimated_clearance_time_min",
-                label: "Estimated Clearance Time (minutes)",
-                type: "number",
-                value: "10",
-                numeric: true
+                value: "20"
             }
 
         ]
@@ -406,7 +305,6 @@ const simulationFeatures = {
 
     /* =====================================
        TEMPORARY SPEED RESTRICTION
-       -> backend/services/temporary_speed_restriction.py
     ===================================== */
 
     speed: {
@@ -417,97 +315,41 @@ const simulationFeatures = {
         description:
             "Calculate delay caused by temporary speed restrictions.",
 
-        backendFeature:
-            "temporary_speed_restriction",
-
         fields: [
 
             {
-                id: "section",
+                id: "sim-train",
+                label: "Train Number",
+                type: "text",
+                value: "12705"
+            },
+
+            {
+                id: "sim-section",
                 label: "Restricted Section",
                 type: "select",
                 options: railwaySections
             },
 
             {
-                id: "current_train_location",
-                label: "Current Train Location",
-                type: "text",
-                value: ""
-            },
-
-            {
-                id: "current_speed_kmph",
-                label: "Current Speed (km/h)",
-                type: "number",
-                value: "80",
-                numeric: true
-            },
-
-            {
-                id: "current_train_delay_min",
-                label: "Current Train Delay (minutes)",
-                type: "number",
-                value: "0",
-                numeric: true
-            },
-
-            {
-                id: "tsr_start_location",
-                label: "TSR Start Location",
-                type: "text",
-                value: ""
-            },
-
-            {
-                id: "tsr_end_location",
-                label: "TSR End Location",
-                type: "text",
-                value: ""
-            },
-
-            {
-                id: "tsr_distance_km",
-                label: "Restricted Distance (km)",
-                type: "number",
-                value: "15",
-                numeric: true
-            },
-
-            {
-                id: "normal_speed_kmph",
+                id: "normal-speed",
                 label: "Normal Speed (km/h)",
                 type: "number",
-                value: "110",
-                numeric: true
+                value: "110"
             },
 
             {
-                id: "restricted_speed_kmph",
+                id: "restricted-speed",
                 label: "Restricted Speed (km/h)",
                 type: "number",
-                value: "50",
-                numeric: true
+                value: "50"
             },
 
             {
-                id: "tsr_status",
-                label: "TSR Status",
-                type: "select",
-                options: ["active", "temporary", "restricted", "cleared"]
-            },
-
-            {
-                id: "tsr_start_time",
-                label: "TSR Start Time",
-                type: "datetime-local"
-            },
-
-            {
-                id: "expected_clearance_time",
-                label: "Expected Clearance Time",
-                type: "text",
-                value: ""
+                id: "restriction-distance",
+                label: "Restricted Distance (km)",
+                type: "number",
+                value: "15"
             }
 
         ]
@@ -517,7 +359,6 @@ const simulationFeatures = {
 
     /* =====================================
        UNSCHEDULED MAINTENANCE
-       -> backend/services/unscheduled_maintenance.py
     ===================================== */
 
     maintenance: {
@@ -528,20 +369,24 @@ const simulationFeatures = {
         description:
             "Simulate emergency maintenance blocks and infrastructure restrictions.",
 
-        backendFeature:
-            "unscheduled_maintenance",
-
         fields: [
 
             {
-                id: "section",
+                id: "sim-train",
+                label: "Train Number",
+                type: "text",
+                value: "12705"
+            },
+
+            {
+                id: "sim-section",
                 label: "Maintenance Section",
                 type: "select",
                 options: railwaySections
             },
 
             {
-                id: "maintenance_type",
+                id: "maintenance-type",
                 label: "Maintenance Type",
                 type: "select",
 
@@ -561,69 +406,10 @@ const simulationFeatures = {
             },
 
             {
-                id: "detection_start_time",
-                label: "Detection Start Time",
-                type: "datetime-local"
-            },
-
-            {
-                id: "block_type",
-                label: "Block Type",
-                type: "select",
-                options: ["partial", "complete", "full", "blocked"]
-            },
-
-            {
-                id: "severity",
-                label: "Severity",
-                type: "select",
-                options: ["low", "medium", "high", "critical"]
-            },
-
-            {
-                id: "estimated_repair_duration_min",
-                label: "Estimated Repair Duration (minutes)",
+                id: "maintenance-duration",
+                label: "Block Duration (minutes)",
                 type: "number",
-                value: "30",
-                numeric: true
-            },
-
-            {
-                id: "affected_length_km",
-                label: "Affected Length (km)",
-                type: "number",
-                value: "2",
-                numeric: true
-            },
-
-            {
-                id: "normal_speed_kmph",
-                label: "Normal Speed (km/h)",
-                type: "number",
-                value: "100",
-                numeric: true
-            },
-
-            {
-                id: "restricted_speed_kmph",
-                label: "Restricted Speed (km/h)",
-                type: "number",
-                value: "30",
-                numeric: true
-            },
-
-            {
-                id: "track_availability",
-                label: "Track Availability",
-                type: "select",
-                options: ["available", "unavailable", "blocked", "closed"]
-            },
-
-            {
-                id: "traffic_level",
-                label: "Traffic Level",
-                type: "select",
-                options: ["low", "moderate", "high", "severe"]
+                value: "30"
             }
 
         ]
@@ -633,7 +419,6 @@ const simulationFeatures = {
 
     /* =====================================
        LEVEL CROSSING
-       -> backend/services/level_crossing.py
     ===================================== */
 
     crossing: {
@@ -644,70 +429,45 @@ const simulationFeatures = {
         description:
             "Simulate delays caused by level crossing operations.",
 
-        backendFeature:
-            "level_crossing",
-
         fields: [
 
             {
-                id: "train_id",
+                id: "sim-train",
                 label: "Train Number",
                 type: "text",
                 value: "12705"
             },
 
             {
-                id: "section",
+                id: "sim-section",
                 label: "Level Crossing Section",
                 type: "select",
                 options: railwaySections
             },
 
             {
-                id: "current_train_delay_min",
-                label: "Current Train Delay (minutes)",
-                type: "number",
-                value: "0",
-                numeric: true
-            },
-
-            {
-                id: "distance_to_crossing_km",
-                label: "Distance to Crossing (km)",
-                type: "number",
-                value: "2",
-                numeric: true
-            },
-
-            {
-                id: "current_train_speed_kmph",
-                label: "Current Train Speed (km/h)",
-                type: "number",
-                value: "60",
-                numeric: true
-            },
-
-            {
-                id: "gate_status",
-                label: "Gate Status",
+                id: "crossing-status",
+                label: "Gate Condition",
                 type: "select",
-                options: ["open", "closing", "closed", "blocked"]
+
+                options: [
+
+                    "Normal Operation",
+
+                    "Gate Opening Delay",
+
+                    "Gate Malfunction",
+
+                    "Road Traffic Congestion"
+
+                ]
             },
 
             {
-                id: "remaining_gate_closure_time_min",
-                label: "Remaining Gate Closure Time (minutes)",
+                id: "crossing-delay",
+                label: "Expected Crossing Delay (minutes)",
                 type: "number",
-                value: "8",
-                numeric: true
-            },
-
-            {
-                id: "gate_clearance_delay_min",
-                label: "Gate Clearance Delay (minutes)",
-                type: "number",
-                value: "2",
-                numeric: true
+                value: "10"
             }
 
         ]
@@ -717,7 +477,6 @@ const simulationFeatures = {
 
     /* =====================================
        OPERATIONAL BOTTLENECK
-       -> backend/services/operational_bottleneck.py
     ===================================== */
 
     bottleneck: {
@@ -728,71 +487,45 @@ const simulationFeatures = {
         description:
             "Simulate junction congestion and capacity limitations.",
 
-        backendFeature:
-            "operational_bottleneck",
-
         fields: [
 
             {
-                id: "section",
-                label: "Affected Junction / Section",
+                id: "sim-train",
+                label: "Train Number",
+                type: "text",
+                value: "12705"
+            },
+
+            {
+                id: "junction",
+                label: "Affected Junction",
                 type: "select",
-                options: railwaySections
+
+                options: [
+
+                    "Vijayawada Junction",
+
+                    "Khammam",
+
+                    "Warangal Junction",
+
+                    "Kazipet Junction"
+
+                ]
             },
 
             {
-                id: "current_train_delay_min",
-                label: "Current Train Delay (minutes)",
+                id: "capacity",
+                label: "Available Route Capacity (%)",
                 type: "number",
-                value: "0",
-                numeric: true
+                value: "60"
             },
 
             {
-                id: "trains_ahead",
+                id: "queue-trains",
                 label: "Number of Trains Waiting",
                 type: "number",
-                value: "4",
-                numeric: true
-            },
-
-            {
-                id: "average_headway_min",
-                label: "Average Headway (minutes)",
-                type: "number",
-                value: "5",
-                numeric: true
-            },
-
-            {
-                id: "section_occupancy_percent",
-                label: "Section Occupancy (%)",
-                type: "number",
-                value: "75",
-                numeric: true
-            },
-
-            {
-                id: "capacity_reduction_percent",
-                label: "Capacity Reduction (%)",
-                type: "number",
-                value: "20",
-                numeric: true
-            },
-
-            {
-                id: "expected_bottleneck_clearance_time_min",
-                label: "Expected Clearance Time (minutes)",
-                type: "number",
-                value: "15",
-                numeric: true
-            },
-
-            {
-                id: "train_priority",
-                label: "Train Priority",
-                type: "select",
-                options: ["low", "normal", "high", "premium"]
+                value: "4"
             }
 
         ]
@@ -865,10 +598,6 @@ function home() {
 function passenger() {
 
     showScreen("passenger");
-
-    // Show the network starting at Guntur
-    // until a real train is searched.
-    renderDefaultRailwayNetwork();
 
 }
 
@@ -1051,6 +780,10 @@ async function forecast() {
             null;
 
 
+        // FIX: the backend returns the per-section forecast as
+        // `predictions` (see app.py get_forecast()). It never
+        // returns `forecast` / `station_forecast` / `stations`,
+        // so this always evaluated to [] before.
         liveStationForecast =
             data.predictions ||
             data.forecast ||
@@ -1060,7 +793,9 @@ async function forecast() {
 
 
         liveEvents =
-            await loadActiveEvents();
+            data.events ||
+            data.active_events ||
+            [];
 
 
         liveRouteSections =
@@ -1113,19 +848,13 @@ async function forecast() {
 
 
         renderRailwayNetwork(
-            withCurrentOriginStation(
-                liveStationForecast,
-                liveTrainData
-            ),
+            liveStationForecast,
             liveTrainData
         );
 
 
         updateLiveTrainPositionFromAPI(
-            withCurrentOriginStation(
-                liveStationForecast,
-                liveTrainData
-            ),
+            liveStationForecast,
             liveTrainData
         );
 
@@ -1297,11 +1026,15 @@ function updateTrainStatus(
 
                 train.from ||
 
+                train.current_name ||
+
                 ""
 
             } → ${
 
                 train.to ||
+
+                train.next_name ||
 
                 ""
 
@@ -1312,9 +1045,14 @@ function updateTrainStatus(
 
     if (cur) {
 
+        // FIX: backend's normalize() returns current_name /
+        // current_code, never current_station / currentStation,
+        // so this always fell through to the placeholder before.
         cur.textContent =
 
             train.current_name ||
+
+            train.current_code ||
 
             train.current_station ||
 
@@ -1328,6 +1066,9 @@ function updateTrainStatus(
     if (delay) {
 
 
+        // FIX: backend field is `delay`, not current_delay /
+        // currentDelay - those never existed, so this always
+        // showed "On time" regardless of the real delay.
         const currentDelay =
 
             Number(
@@ -1359,6 +1100,8 @@ function updateTrainStatus(
         next.textContent =
 
             train.next_name ||
+
+            train.next_code ||
 
             train.next_station ||
 
@@ -1403,6 +1146,11 @@ function updateJourney(
     }
 
 
+    // FIX: backend never returns train.progress /
+    // journey_progress - those fields don't exist, so this was
+    // always 0%. Derive real progress from how far along the
+    // predicted section list (liveStationForecast) the train's
+    // current station actually is.
     const progress =
 
         Number(
@@ -1411,7 +1159,10 @@ function updateJourney(
 
             train.journey_progress ??
 
-            0
+            computeJourneyProgressPercent(
+                liveStationForecast,
+                train
+            )
 
         );
 
@@ -1469,6 +1220,14 @@ function updateJourney(
 
             train.source ||
 
+            (
+                liveStationForecast[0] &&
+                (
+                    liveStationForecast[0].from_station ||
+                    liveStationForecast[0].from_code
+                )
+            ) ||
+
             "Source";
 
     }
@@ -1481,6 +1240,14 @@ function updateJourney(
             train.to ||
 
             train.destination ||
+
+            (
+                liveStationForecast.length > 0 &&
+                (
+                    liveStationForecast[liveStationForecast.length - 1].to_station ||
+                    liveStationForecast[liveStationForecast.length - 1].to_code
+                )
+            ) ||
 
             "Destination";
 
@@ -1508,6 +1275,10 @@ function updateJourney(
     if (journeyStatus) {
 
         const currentStation =
+
+            train.current_name ||
+
+            train.current_code ||
 
             train.current_station ||
 
@@ -1602,8 +1373,6 @@ function renderImpacts(
                 sum +
 
                 Number(
-
-                    item.current_impact_min ??
 
                     item.impact ??
 
@@ -1728,8 +1497,6 @@ function renderImpacts(
             const impact =
 
                 Number(
-
-                    item.current_impact_min ??
 
                     item.impact ??
 
@@ -1883,8 +1650,6 @@ function renderForecastTimeline(
 
                 Number(
 
-                    station.predicted_delay_min ??
-
                     station.delay ??
 
                     station.predicted_delay ??
@@ -1939,9 +1704,8 @@ function renderForecastTimeline(
 
             if (
 
-                status === "Current" ||
-                status === "Upcoming" ||
-                status === "SLIGHT DELAY"
+                status ===
+                "Current"
 
             ) {
 
@@ -1953,12 +1717,13 @@ function renderForecastTimeline(
 
             if (
 
-                status === "DELAYED"
+                status ===
+                "Upcoming"
 
             ) {
 
                 statusClass =
-                    "status-bad";
+                    "status-mid";
 
             }
 
@@ -2003,8 +1768,6 @@ function renderForecastTimeline(
 
                         ${
 
-                            station.to_station ||
-
                             station.station ||
 
                             station.station_name ||
@@ -2019,8 +1782,6 @@ function renderForecastTimeline(
                     <div class="station-code">
 
                         ${
-
-                            station.to_code ||
 
                             station.code ||
 
@@ -2041,8 +1802,6 @@ function renderForecastTimeline(
 
                         ${
 
-                            station.predicted_eta ||
-
                             station.predicted ||
 
                             station.predicted_time ||
@@ -2061,8 +1820,6 @@ function renderForecastTimeline(
                         Scheduled:
 
                         ${
-
-                            station.scheduled_eta ||
 
                             station.scheduled ||
 
@@ -2122,441 +1879,170 @@ function renderForecastTimeline(
 
 }
 /* =========================================
-   RENDER LIVE RAILWAY NETWORK
+   JOURNEY STATE HELPERS
+   ---------------------------------------
+   The backend returns a per-SECTION list
+   (from_station -> to_station legs), not a
+   flat per-station list. These helpers turn
+   that into an ordered, de-duplicated station
+   list plus the train's position within it,
+   so every consumer (network view, journey
+   progress bar, train marker) agrees on the
+   same journey state.
 ========================================= */
 
-/* =========================================
-   INCLUDE THE TRAIN'S CURRENT / ORIGIN
-   STATION AS A REAL NODE ON THE NETWORK
-
-   The backend's forecast list only contains
-   the stations AHEAD of the train (each
-   entry's "to_station"), because it is
-   forecasting arrivals - it never includes
-   the station the train is currently at or
-   departing from. That meant the network
-   diagram and the live position marker had
-   no node to represent Guntur (or whichever
-   station the train is actually at right
-   now), so the marker defaulted to the very
-   first upcoming station instead - making it
-   look like the train had already reached
-   Mangalagiri when it may still be on its
-   way there from Guntur.
-
-   This wraps the real forecast data with one
-   extra leading node built from the first
-   entry's "from_station"/"from_code" (the
-   train's real current station), so the
-   diagram and the live marker both correctly
-   start there and animate towards the next
-   station as section_progress increases.
-========================================= */
-
-function withCurrentOriginStation(
-    stationForecast,
-    train
+function buildStationListFromSections(
+    sections = []
 ) {
 
-    if (
-        !Array.isArray(stationForecast) ||
-        stationForecast.length === 0
-    ) {
+    if (!sections || sections.length === 0) {
 
-        return stationForecast;
+        return [];
 
     }
+
+    const list = [];
 
     const first =
-        stationForecast[0];
+        sections[0];
 
-    const originCode =
-        first.from_code ||
-        first.fromCode ||
-        "";
+    list.push({
+        code:
+            first.from_code ||
+            first.from_station ||
+            "",
+        name:
+            first.from_station ||
+            first.from_code ||
+            "Station"
+    });
 
-    const originName =
-        first.from_station ||
-        first.fromStation ||
-        "";
+    sections.forEach(section => {
 
-    if (!originName) {
+        const code =
+            section.to_code ||
+            section.to_station ||
+            "";
 
-        return stationForecast;
+        const name =
+            section.to_station ||
+            section.to_code ||
+            "Station";
 
-    }
+        const last =
+            list[list.length - 1];
 
-    // Defensive: don't duplicate a node if
-    // the origin is somehow already the
-    // first "to" station in the list.
-    if (
-        originCode &&
-        first.to_code === originCode
-    ) {
+        // Avoid duplicating a station when
+        // consecutive sections share an
+        // endpoint.
+        if (
+            !last ||
+            (last.code !== code && last.name !== name)
+        ) {
 
-        return stationForecast;
+            list.push({ code, name });
 
-    }
+        }
 
-    const trainDelay =
-        Number(
-            (train &&
-                (train.delay ??
-                    train.delayMinutes)) ||
-            0
-        );
+    });
 
-    const originStatus =
-        trainDelay > 10
-            ? "DELAYED"
-            : trainDelay > 2
-                ? "SLIGHT DELAY"
-                : "ON TIME";
-
-    const originNode = {
-
-        to_code:
-            originCode,
-
-        to_station:
-            originName,
-
-        scheduled_eta:
-            "--",
-
-        predicted_eta:
-            "At Station",
-
-        predicted_delay_min:
-            trainDelay,
-
-        status:
-            originStatus
-
-    };
-
-    return [
-        originNode,
-        ...stationForecast
-    ];
+    return list;
 
 }
 
 
-function renderRailwayNetwork(
-    stations = [],
+function findCurrentStationIndex(
+    stationList = [],
     train = {}
 ) {
-
-    const network =
-        document.getElementById(
-            "rail-network"
-        );
-
-    if (!network) {
-
-        return;
-
-    }
-
-    if (
-        !stations ||
-        stations.length === 0
-    ) {
-
-        network.innerHTML = `
-            <div class="no-data">
-                No live route data available.
-            </div>
-        `;
-
-        network._trackPath = null;
-        network._points = null;
-
-        return;
-
-    }
 
     const currentCode =
         train.current_code ||
         train.currentCode ||
         "";
 
-    /* =====================================
-       LAYOUT CONSTANTS
-       (a winding vertical "S" route, like
-       a train-tracker line map)
-    ===================================== */
+    const currentName =
+        train.current_name ||
+        train.currentName ||
+        "";
 
-    const width = 640;
-    const rowHeight = 118;
-    const topPad = 46;
-    const bottomPad = 46;
-    const leftX = 210;
-    const rightX = width - 210;
+    if (!currentCode && !currentName) {
 
-    const height =
-        topPad +
-        bottomPad +
-        (stations.length - 1) * rowHeight;
-
-    const points =
-        stations.map(
-            (station, i) => ({
-                x: i % 2 === 0 ? leftX : rightX,
-                y: topPad + (i * rowHeight),
-                station
-            })
-        );
-
-    /* =====================================
-       SMOOTH CURVED PATH THROUGH POINTS
-       Vertical tangents at every station
-       keep the curve continuous (C1),
-       producing a flowing S-shaped track.
-    ===================================== */
-
-    let pathData =
-        `M ${points[0].x} ${points[0].y}`;
-
-    for (let i = 1; i < points.length; i++) {
-
-        const prev = points[i - 1];
-        const curr = points[i];
-        const midY = (prev.y + curr.y) / 2;
-
-        pathData +=
-            ` C ${prev.x} ${midY}, ${curr.x} ${midY}, ${curr.x} ${curr.y}`;
+        return -1;
 
     }
 
-    /* =====================================
-       STATION NODES + LABELS
-    ===================================== */
-
-    let stationMarkup = "";
-
-    points.forEach(
-        (point, i) => {
-
-            const station = point.station;
-
-            const code =
-                station.to_code ||
-                station.code ||
-                station.station_code ||
-                "";
-
-            const name =
-                station.to_station ||
-                station.station ||
-                station.station_name ||
-                "Station";
-
-            const predictedEta =
-                station.predicted_eta ||
-                station.predicted ||
-                station.predicted_time ||
-                station.eta ||
-                "--";
-
-            const scheduledEta =
-                station.scheduled_eta ||
-                station.scheduled ||
-                station.scheduled_time ||
-                "--";
-
-            const delay =
-                Number(
-                    station.predicted_delay_min ??
-                    station.delay ??
-                    station.predicted_delay ??
-                    station.delay_min ??
-                    0
-                );
-
-            const rawStatus =
-                (station.status || "").toUpperCase();
-
-            let statusClass = "good";
-
-            if (rawStatus === "SLIGHT DELAY") {
-                statusClass = "mid";
-            }
-
-            if (rawStatus === "DELAYED") {
-                statusClass = "bad";
-            }
-
-            const isCurrent =
-                Boolean(code) &&
-                code === currentCode;
-
-            const side =
-                point.x === leftX
-                    ? "left"
-                    : "right";
-
-            const labelAnchor =
-                side === "left"
-                    ? "end"
-                    : "start";
-
-            const labelX =
-                side === "left"
-                    ? point.x - 24
-                    : point.x + 24;
-
-            const delayText =
-                delay > 0
-                    ? `+${Math.round(delay)} min`
-                    : "On time";
-
-            stationMarkup += `
-                <g
-                    class="network-station${isCurrent ? " current-network-station" : ""}"
-                    data-code="${code}"
-                >
-
-                    <circle
-                        class="station-dot-glow status-${statusClass}"
-                        cx="${point.x}"
-                        cy="${point.y}"
-                        r="${isCurrent ? 16 : 11}"
-                    ></circle>
-
-                    <circle
-                        class="station-dot status-${statusClass}${isCurrent ? " current" : ""}"
-                        cx="${point.x}"
-                        cy="${point.y}"
-                        r="${isCurrent ? 8 : 5.5}"
-                    ></circle>
-
-                    <text
-                        class="station-label-name"
-                        x="${labelX}"
-                        y="${point.y - 8}"
-                        text-anchor="${labelAnchor}"
-                    >${name}</text>
-
-                    <text
-                        class="station-label-code"
-                        x="${labelX}"
-                        y="${point.y + 9}"
-                        text-anchor="${labelAnchor}"
-                    >${code}${code ? " • " : ""}Sch ${scheduledEta}</text>
-
-                    <text
-                        class="station-label-eta status-${statusClass}"
-                        x="${labelX}"
-                        y="${point.y + 26}"
-                        text-anchor="${labelAnchor}"
-                    >${predictedEta} · ${delayText}</text>
-
-                </g>
-            `;
-
-        }
+    let index = stationList.findIndex(
+        station =>
+            currentCode &&
+            station.code === currentCode
     );
 
-    /* =====================================
-       BUILD THE SVG
-    ===================================== */
+    if (index === -1 && currentName) {
 
-    const firstPoint = points[0];
-
-    const svgMarkup = `
-        <svg
-            viewBox="0 0 ${width} ${height}"
-            width="100%"
-            height="${height}"
-            preserveAspectRatio="xMidYMin meet"
-        >
-
-            <defs>
-                <linearGradient id="trackGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stop-color="#38bdf8"></stop>
-                    <stop offset="50%" stop-color="#3b82f6"></stop>
-                    <stop offset="100%" stop-color="#8b5cf6"></stop>
-                </linearGradient>
-            </defs>
-
-            <path class="rail-track-glow" d="${pathData}"></path>
-            <path class="rail-track-path" d="${pathData}"></path>
-
-            ${stationMarkup}
-
-            <g
-                id="live-network-train"
-                class="live-network-train"
-                transform="translate(${firstPoint.x}, ${firstPoint.y})"
-            >
-
-                <circle class="live-train-ring" r="9"></circle>
-                <circle class="live-train-core" r="11"></circle>
-
-                <text
-                    class="live-train-icon"
-                    text-anchor="middle"
-                    dy="4"
-                >🚆</text>
-
-            </g>
-
-        </svg>
-    `;
-
-    network.innerHTML = svgMarkup;
-
-    /* =====================================
-       CACHE PATH + POINTS FOR LIVE
-       POSITION UPDATES
-    ===================================== */
-
-    network._trackPath =
-        network.querySelector(
-            ".rail-track-path"
+        index = stationList.findIndex(
+            station =>
+                station.name === currentName
         );
 
-    network._points =
-        points;
+    }
+
+    return index;
+
+}
+
+
+function computeJourneyProgressPercent(
+    sections = [],
+    train = {}
+) {
+
+    const stationList =
+        buildStationListFromSections(
+            sections
+        );
+
+    if (stationList.length <= 1) {
+
+        return 0;
+
+    }
+
+    const currentIndex =
+        findCurrentStationIndex(
+            stationList,
+            train
+        );
+
+    if (currentIndex === -1) {
+
+        return 0;
+
+    }
+
+    return (
+        (currentIndex / (stationList.length - 1))
+        * 100
+    );
 
 }
 
 
 /* =========================================
-   DEFAULT LIVE RAILWAY NETWORK
-
-   Before any train has been searched, the
-   Live Railway Network panel should not be
-   an empty placeholder - it should already
-   show the active route with the train
-   sitting at Guntur, the origin station of
-   the monitored section.
+   RENDER LIVE RAILWAY NETWORK
 ========================================= */
 
-const defaultNetworkStations = [
+function renderRailwayNetwork(
+    sections = [],
+    train = {}
+) {
 
-    { code: "GNT", station: "Guntur" },
-    { code: "MAGI", station: "Mangalagiri" },
-    { code: "BZA", station: "Vijayawada" },
-    { code: "MDR", station: "Madhira" },
-    { code: "KMT", station: "Khammam" },
-    { code: "DKW", station: "Dornakal" },
-    { code: "MABD", station: "Mahbubabad" },
-    { code: "NEK", station: "Nekonda" },
-    { code: "WL", station: "Warangal" },
-    { code: "KZJ", station: "Kazipet" }
-
-];
-
-
-function renderDefaultRailwayNetwork() {
 
     const network =
         document.getElementById(
             "rail-network"
         );
+
 
     if (!network) {
 
@@ -2564,43 +2050,173 @@ function renderDefaultRailwayNetwork() {
 
     }
 
-    // Don't overwrite a real, already-loaded
-    // live route with the placeholder route.
-    if (liveTrainData) {
+
+    network.innerHTML =
+        "";
+
+
+    // FIX: `sections` is the backend's `predictions` array -
+    // a list of from_station -> to_station legs, not a flat
+    // per-station list. Derive the full, ordered station list
+    // from it so every station stays visible (Main Problem 1),
+    // instead of bailing out here because the old code expected
+    // fields (`station.code`, `station.station`) that never
+    // existed on a section record.
+    const stationList =
+        buildStationListFromSections(
+            sections
+        );
+
+    if (stationList.length === 0) {
 
         return;
 
     }
 
-    const originStation =
-        defaultNetworkStations[0];
-
-    const stations =
-        defaultNetworkStations.map(
-            (station, i) => ({
-                to_code: station.code,
-                to_station: station.station,
-                scheduled_eta: "--",
-                predicted_eta:
-                    i === 0
-                        ? "At Station"
-                        : "--",
-                status:
-                    i === 0
-                        ? "ON TIME"
-                        : "",
-                predicted_delay_min: 0
-            })
+    const currentIndex =
+        findCurrentStationIndex(
+            stationList,
+            train
         );
 
-    renderRailwayNetwork(
-        stations,
-        {
-            // Train starts at Guntur,
-            // the first station.
-            current_code:
-                originStation.code
+
+    stationList.forEach(
+        (station, index) => {
+
+
+            const stationElement =
+
+                document.createElement(
+                    "div"
+                );
+
+
+            stationElement.className =
+                "network-station";
+
+
+            stationElement.dataset.code =
+                station.code;
+
+
+            // FIX: journey state is now derived from position
+            // relative to the train's real current station,
+            // instead of a single "is this THE current station"
+            // check that left everything else unlabeled.
+            let state = "upcoming";
+
+            if (currentIndex === -1) {
+
+                // No live current-station data at all
+                // (e.g. journey not started / API unavailable).
+                // Still show every station, just without a
+                // completed/current split.
+                state = "upcoming";
+
+            } else if (index < currentIndex) {
+
+                state = "completed";
+
+            } else if (index === currentIndex) {
+
+                state = "current";
+
+            } else if (index === currentIndex + 1) {
+
+                state = "next";
+
+            }
+
+
+            const icon =
+                state === "current"
+                    ? "🚆"
+                    : state === "completed"
+                        ? "✓"
+                        : state === "next"
+                            ? "→"
+                            : "○";
+
+
+            stationElement.innerHTML = `
+
+                <div class="network-station-marker">
+
+                    ${icon}
+
+                </div>
+
+
+                <div class="network-station-info">
+
+                    <b>
+
+                        ${station.code}
+
+                    </b>
+
+
+                    <span>
+
+                        ${station.name}
+
+                    </span>
+
+                </div>
+
+            `;
+
+
+            stationElement.classList.add(
+                `network-station-${state}`
+            );
+
+            if (state === "current") {
+
+                stationElement.classList.add(
+                    "current-network-station"
+                );
+
+            }
+
+
+            network.appendChild(
+                stationElement
+            );
+
         }
+
+    );
+
+
+    /* =====================================
+       ADD LIVE TRAIN MARKER
+       (position is set separately by
+       updateLiveTrainPositionFromAPI, once
+       these station elements exist in the DOM)
+    ===================================== */
+
+    const trainMarker =
+
+        document.createElement(
+            "div"
+        );
+
+
+    trainMarker.id =
+        "live-network-train";
+
+
+    trainMarker.className =
+        "live-network-train";
+
+
+    trainMarker.textContent =
+        "🚆";
+
+
+    network.appendChild(
+        trainMarker
     );
 
 }
@@ -3071,253 +2687,10 @@ function getValue(id) {
 
 
 /* =========================================
-   BUILD PAYLOAD FROM DYNAMIC FIELDS
-
-   Reads exactly the fields rendered for the
-   currently selected simulation type and
-   turns them into the same parameter names
-   the backend calculator expects.
-========================================= */
-
-function buildSimulationPayload(feature) {
-
-    const payload = {
-
-        feature:
-            feature.backendFeature
-
-    };
-
-    feature.fields.forEach(field => {
-
-        let value;
-
-        if (field.numeric) {
-
-            value =
-                getNumber(field.id);
-
-        } else if (field.boolean) {
-
-            value =
-                getValue(field.id) === "Yes";
-
-        } else {
-
-            value =
-                getValue(field.id);
-
-        }
-
-        payload[field.id] =
-            value;
-
-    });
-
-    return payload;
-
-}
-
-
-/* =========================================
-   RENDER SIMULATION RESULT
-
-   Renders exactly what the backend
-   calculator returned - the same
-   standardized event structure produced
-   for live Railway Authorized API data.
-========================================= */
-
-function renderSimulationResult(
-    feature,
-    event
-) {
-
-    const result =
-        document.getElementById(
-            "simulation-result"
-        );
-
-    if (!result) {
-
-        return;
-
-    }
-
-    const currentImpact =
-        Number(
-            event.current_impact_min ?? 0
-        );
-
-    const normalImpact =
-        Number(
-            event.normal_impact_min ?? 0
-        );
-
-    const netImpact =
-        Math.max(
-            0,
-            currentImpact - normalImpact
-        );
-
-    const skipKeys = new Set([
-        "feature",
-        "condition_type",
-        "current_impact_min",
-        "normal_impact_min",
-        "event_id",
-        "created_at",
-        "active",
-        "source",
-        "section"
-    ]);
-
-    let paramRows = "";
-
-    Object.keys(event)
-        .filter(key => !skipKeys.has(key))
-        .forEach(key => {
-
-            const rawValue =
-                event[key];
-
-            if (
-                rawValue === null ||
-                rawValue === undefined ||
-                rawValue === ""
-            ) {
-
-                return;
-
-            }
-
-            const label =
-                key
-                    .replace(/_/g, " ")
-                    .replace(/\b\w/g, c => c.toUpperCase());
-
-            paramRows += `
-                <div class="param-row">
-                    <span>${label}</span>
-                    <b>${rawValue}</b>
-                </div>
-            `;
-
-        });
-
-    result.classList.remove("hide");
-
-    result.innerHTML = `
-
-        <div class="simulation-result-header">
-
-            <span class="section-label">
-                LIVE BACKEND CALCULATION RESULT
-            </span>
-
-            <h2>${feature.title}</h2>
-
-            <span class="simulation-source-tag">
-                engine: ${event.feature || feature.backendFeature}
-            </span>
-
-        </div>
-
-
-        <div class="simulation-impact-result">
-
-            <div class="impact-value">
-                +${currentImpact.toFixed(2)} min
-            </div>
-
-            <div>
-                <b>Current Impact (calculated by backend)</b>
-                <p>
-                    This is the live output of
-                    <code>calculate_${feature.backendFeature}()</code>
-                    for the parameters you entered.
-                </p>
-            </div>
-
-        </div>
-
-
-        <div class="simulation-analysis">
-
-            <div>
-                <small>NORMAL / BASELINE IMPACT</small>
-                <b>${normalImpact.toFixed(2)} min</b>
-            </div>
-
-            <div>
-                <small>NET ADDITIONAL DELAY</small>
-                <b class="delay-result">+${netImpact.toFixed(2)} min</b>
-            </div>
-
-            <div>
-                <small>AFFECTED SECTION</small>
-                <b>${event.section || "-"}</b>
-            </div>
-
-        </div>
-
-
-        <div class="simulation-params">
-
-            <span class="section-label">
-                PARAMETERS USED IN THIS CALCULATION
-            </span>
-
-            <div class="simulation-params-grid">
-                ${paramRows}
-            </div>
-
-        </div>
-
-
-        <div class="simulation-ai-note">
-
-            <span>🧠</span>
-
-            <p>
-                This simulation event has been added to the
-                active events list and can now feed into the
-                RailForecast Dynamic ETA Engine together with
-                historical ML prediction, live train data,
-                real-time corrections and railway-authorized
-                API intelligence.
-            </p>
-
-        </div>
-
-    `;
-
-    setTimeout(() => {
-
-        result.scrollIntoView({
-            behavior: "smooth",
-            block: "center"
-        });
-
-    }, 100);
-
-}
-
-
-/* =========================================
    RUN SIMULATION
-
-   Sends the entered parameters straight to
-   POST /api/simulation/event, which runs
-   them through the real backend calculator
-   (backend/adapters/simulation_mapper.py ->
-   backend/services/<feature>.py) - the same
-   engine used for live Railway Authorized
-   API data. No calculation happens in the
-   frontend.
 ========================================= */
 
-async function runSimulation() {
+function runSimulation() {
 
 
     if (!currentSimulation) {
@@ -3343,72 +2716,757 @@ async function runSimulation() {
         );
 
 
-    if (!feature || !result) {
+    if (!result) {
 
         return;
 
     }
 
 
-    const payload =
-        buildSimulationPayload(feature);
+    let impact = 0;
+
+    let explanation = "";
+
+    let affectedSection = "";
 
 
-    result.classList.remove("hide");
+    /* =====================================
+       SIGNAL SIMULATION
+    ===================================== */
+
+    if (
+
+        currentSimulation ===
+        "signal"
+
+    ) {
+
+
+        const delay =
+            getNumber(
+                "signal-delay"
+            );
+
+
+        const condition =
+            getValue(
+                "signal-status"
+            );
+
+
+        affectedSection =
+            getValue(
+                "sim-section"
+            );
+
+
+        let multiplier = 1;
+
+
+        if (
+
+            condition ===
+            "Signal Failure"
+
+        ) {
+
+            multiplier = 1.3;
+
+        }
+
+
+        else if (
+
+            condition ===
+            "Signal Communication Failure"
+
+        ) {
+
+            multiplier = 1.2;
+
+        }
+
+
+        else if (
+
+            condition ===
+            "Temporary Signal Hold"
+
+        ) {
+
+            multiplier = 0.8;
+
+        }
+
+
+        impact =
+            Math.round(
+                delay * multiplier
+            );
+
+
+        explanation =
+            `${condition} is affecting train movement and signal clearance in the selected section.`;
+
+    }
+
+
+    /* =====================================
+       CONGESTION SIMULATION
+    ===================================== */
+
+    else if (
+
+        currentSimulation ===
+        "congestion"
+
+    ) {
+
+
+        const traffic =
+            getValue(
+                "traffic-level"
+            );
+
+
+        const trains =
+            getNumber(
+                "trains-count"
+            );
+
+
+        affectedSection =
+            getValue(
+                "sim-section"
+            );
+
+
+        let baseImpact = 8;
+
+
+        if (
+
+            traffic ===
+            "High"
+
+        ) {
+
+            baseImpact = 15;
+
+        }
+
+
+        if (
+
+            traffic ===
+            "Severe"
+
+        ) {
+
+            baseImpact = 25;
+
+        }
+
+
+        impact =
+            Math.round(
+
+                baseImpact +
+
+                trains * 3
+
+            );
+
+
+        explanation =
+            `${trains} trains ahead are creating ${traffic.toLowerCase()} traffic congestion and increasing waiting time.`;
+
+    }
+
+
+    /* =====================================
+       PRECEDING TRAIN
+    ===================================== */
+
+    else if (
+
+        currentSimulation ===
+        "preceding"
+
+    ) {
+
+
+        const precedingTrain =
+            getValue(
+                "preceding-train"
+            );
+
+
+        const precedingDelay =
+            getNumber(
+                "preceding-delay"
+            );
+
+
+        affectedSection =
+            getValue(
+                "sim-section"
+            );
+
+
+        impact =
+            Math.round(
+                precedingDelay * 0.65
+            );
+
+
+        explanation =
+            `Delay propagation from Train ${precedingTrain} is reducing route availability for your train.`;
+
+    }
+
+
+    /* =====================================
+       SPEED RESTRICTION
+    ===================================== */
+
+    else if (
+
+        currentSimulation ===
+        "speed"
+
+    ) {
+
+
+        const normalSpeed =
+            getNumber(
+                "normal-speed"
+            );
+
+
+        const restrictedSpeed =
+            getNumber(
+                "restricted-speed"
+            );
+
+
+        const distance =
+            getNumber(
+                "restriction-distance"
+            );
+
+
+        affectedSection =
+            getValue(
+                "sim-section"
+            );
+
+
+        if (
+
+            normalSpeed <= 0 ||
+
+            restrictedSpeed <= 0 ||
+
+            distance <= 0
+
+        ) {
+
+            alert(
+                "Please enter valid speed and distance values."
+            );
+
+            return;
+
+        }
+
+
+        const normalTime =
+
+            (
+                distance /
+
+                normalSpeed
+            )
+
+            * 60;
+
+
+        const restrictedTime =
+
+            (
+                distance /
+
+                restrictedSpeed
+            )
+
+            * 60;
+
+
+        impact =
+            Math.round(
+
+                restrictedTime -
+
+                normalTime
+
+            );
+
+
+        explanation =
+            `Speed is reduced from ${normalSpeed} km/h to ${restrictedSpeed} km/h over a distance of ${distance} km.`;
+
+    }
+
+
+    /* =====================================
+       MAINTENANCE
+    ===================================== */
+
+    else if (
+
+        currentSimulation ===
+        "maintenance"
+
+    ) {
+
+
+        const duration =
+            getNumber(
+                "maintenance-duration"
+            );
+
+
+        const maintenanceType =
+            getValue(
+                "maintenance-type"
+            );
+
+
+        affectedSection =
+            getValue(
+                "sim-section"
+            );
+
+
+        let multiplier =
+            0.8;
+
+
+        if (
+
+            maintenanceType ===
+            "Emergency Repair"
+
+        ) {
+
+            multiplier =
+                1.1;
+
+        }
+
+
+        else if (
+
+            maintenanceType ===
+            "Maintenance Block"
+
+        ) {
+
+            multiplier =
+                1;
+
+        }
+
+
+        else if (
+
+            maintenanceType ===
+            "Track Inspection"
+
+        ) {
+
+            multiplier =
+                0.5;
+
+        }
+
+
+        impact =
+            Math.round(
+                duration *
+                multiplier
+            );
+
+
+        explanation =
+            `${maintenanceType} is temporarily reducing route availability in the affected railway section.`;
+
+    }
+
+
+    /* =====================================
+       LEVEL CROSSING
+    ===================================== */
+
+    else if (
+
+        currentSimulation ===
+        "crossing"
+
+    ) {
+
+
+        const crossingDelay =
+            getNumber(
+                "crossing-delay"
+            );
+
+
+        const status =
+            getValue(
+                "crossing-status"
+            );
+
+
+        affectedSection =
+            getValue(
+                "sim-section"
+            );
+
+
+        let multiplier =
+            1;
+
+
+        if (
+
+            status ===
+            "Gate Opening Delay"
+
+        ) {
+
+            multiplier =
+                1.2;
+
+        }
+
+
+        else if (
+
+            status ===
+            "Gate Malfunction"
+
+        ) {
+
+            multiplier =
+                1.5;
+
+        }
+
+
+        else if (
+
+            status ===
+            "Road Traffic Congestion"
+
+        ) {
+
+            multiplier =
+                1.3;
+
+        }
+
+
+        impact =
+            Math.round(
+                crossingDelay *
+                multiplier
+            );
+
+
+        explanation =
+            `${status} is increasing train waiting time near the affected level crossing.`;
+
+    }
+
+
+    /* =====================================
+       OPERATIONAL BOTTLENECK
+    ===================================== */
+
+    else if (
+
+        currentSimulation ===
+        "bottleneck"
+
+    ) {
+
+
+        const capacity =
+            getNumber(
+                "capacity"
+            );
+
+
+        const trains =
+            getNumber(
+                "queue-trains"
+            );
+
+
+        affectedSection =
+            getValue(
+                "junction"
+            );
+
+
+        if (
+
+            capacity < 0 ||
+
+            capacity > 100
+
+        ) {
+
+            alert(
+                "Route capacity must be between 0 and 100."
+            );
+
+            return;
+
+        }
+
+
+        const capacityImpact =
+
+            (
+                100 -
+
+                capacity
+            )
+
+            * 0.5;
+
+
+        const trainImpact =
+
+            trains *
+
+            4;
+
+
+        impact =
+            Math.round(
+
+                capacityImpact +
+
+                trainImpact
+
+            );
+
+
+        explanation =
+            `Available route capacity at ${affectedSection} is ${capacity}% with ${trains} trains waiting for clearance.`;
+
+    }
+
+
+    impact =
+        Math.max(
+            0,
+            impact
+        );
+
+
+    const currentDelay =
+
+    Number(
+
+        liveTrainData?.current_delay ??
+
+        liveTrainData?.currentDelay ??
+
+        0
+
+    );
+
+
+const updatedDelay =
+
+    currentDelay +
+
+    impact;
+
+
+    result.classList.remove(
+        "hide"
+    );
+
 
     result.innerHTML = `
-        <div class="simulation-loading">
-            <span class="mini-spinner"></span>
-            Running ${feature.backendFeature} calculation on the backend…
+
+        <div class="simulation-result-header">
+
+            <span class="section-label">
+
+                SIMULATION RESULT
+
+            </span>
+
+
+            <h2>
+
+                ${feature.title}
+
+            </h2>
+
         </div>
+
+
+        <div class="simulation-impact-result">
+
+
+            <div class="impact-value">
+
+                +${impact} min
+
+            </div>
+
+
+            <div>
+
+                <b>
+
+                    Predicted Additional Delay
+
+                </b>
+
+
+                <p>
+
+                    ${explanation}
+
+                </p>
+
+            </div>
+
+
+        </div>
+
+
+        <div class="simulation-analysis">
+
+
+            <div>
+
+                <small>
+
+                    AFFECTED AREA
+
+                </small>
+
+
+                <b>
+
+                    ${affectedSection}
+
+                </b>
+
+            </div>
+
+
+            <div>
+
+                <small>
+
+                    SIMULATION IMPACT
+
+                </small>
+
+
+                <b class="delay-result">
+
+                    +${impact} min
+
+                </b>
+
+            </div>
+
+
+            <div>
+
+                <small>
+
+                    CURRENT TRAIN DELAY
+
+                </small>
+
+
+                <b>
+
+                    +${currentDelay} min
+
+                </b>
+
+            </div>
+
+
+            <div>
+
+                <small>
+
+                    UPDATED PREDICTED DELAY
+
+                </small>
+
+
+                <b>
+
+                    +${updatedDelay} min
+
+                </b>
+
+            </div>
+
+
+        </div>
+
+
+        <div class="simulation-ai-note">
+
+            <span>
+
+                🧠
+
+            </span>
+
+
+            <p>
+
+                This simulation creates an additional disruption impact that can be passed into the RailForecast Dynamic ETA Engine together with historical ML prediction, live train data, real-time corrections and railway-authorized API intelligence.
+
+            </p>
+
+
+        </div>
+
     `;
+
 
     setTimeout(() => {
 
         result.scrollIntoView({
-            behavior: "smooth",
-            block: "center"
+
+            behavior:
+                "smooth",
+
+            block:
+                "center"
+
         });
 
-    }, 50);
-
-
-    try {
-
-        const event =
-            await submitSimulationEvent(payload);
-
-        renderSimulationResult(
-            feature,
-            event
-        );
-
-        try {
-
-            liveEvents =
-                await loadActiveEvents();
-
-            renderImpacts(liveEvents);
-
-        } catch (refreshError) {
-
-            console.warn(
-                "Could not refresh active events:",
-                refreshError
-            );
-
-        }
-
-    } catch (error) {
-
-        result.innerHTML = `
-            <div class="simulation-error">
-                <b>Simulation could not be calculated</b>
-                <p>${error.message}</p>
-            </div>
-        `;
-
-    }
+    }, 100);
 
 }
 
@@ -3597,9 +3655,10 @@ function capitalize(text) {
 ========================================= */
 
 function updateLiveTrainPositionFromAPI(
-    stations,
+    sections,
     train
 ) {
+
 
     if (!train) {
 
@@ -3607,144 +3666,122 @@ function updateLiveTrainPositionFromAPI(
 
     }
 
+
     const network =
         document.getElementById(
             "rail-network"
         );
 
-    if (!network) {
-
-        return;
-
-    }
-
-    const path =
-        network._trackPath ||
-        network.querySelector(
-            ".rail-track-path"
-        );
-
-    const points =
-        network._points;
 
     const trainMarker =
         document.getElementById(
             "live-network-train"
         );
 
-    if (
-        !path ||
-        !points ||
-        points.length === 0 ||
-        !trainMarker
-    ) {
+
+    if (!network || !trainMarker) {
 
         return;
 
     }
 
-    const currentCode =
-        train.current_code ||
-        train.currentCode ||
+
+    // FIX: this function previously called
+    // updateLiveTrainPosition(...) - a function that is not
+    // defined anywhere in this file - and was immediately
+    // followed by an orphaned duplicate code block (re-declaring
+    // `stations` as a const, which is the same name as this
+    // function's own parameter). That duplicate declaration was
+    // a hard SyntaxError, which meant this entire script.js file
+    // failed to parse in the browser, so NONE of the JavaScript
+    // on the page ever ran. This rewrite removes the dead call
+    // and the orphaned block, and positions the real
+    // #live-network-train marker over the train's real current
+    // station element.
+
+    const stationList =
+        buildStationListFromSections(
+            sections
+        );
+
+    const currentIndex =
+        findCurrentStationIndex(
+            stationList,
+            train
+        );
+
+    if (currentIndex === -1) {
+
+        // No live current-station data yet (journey not
+        // started, or the Weather/Live API is temporarily
+        // unavailable). Keep the marker hidden rather than
+        // guessing a position.
+        trainMarker.style.display =
+            "none";
+
+        return;
+
+    }
+
+    const stationElements =
+        network.querySelectorAll(
+            ".network-station"
+        );
+
+    const currentElement =
+        stationElements[currentIndex];
+
+    if (!currentElement) {
+
+        trainMarker.style.display =
+            "none";
+
+        return;
+
+    }
+
+    // NOTE: the backend does not currently return a
+    // sub-section progress fraction (normalize() in app.py has
+    // no such field), so there is no real signal to interpolate
+    // between the current and next station. Rather than
+    // fabricate a position, the marker is placed exactly at the
+    // train's actual current station - the one thing we do
+    // know for certain from live data.
+    //
+    // TODO (future enhancement, needs a small backend addition):
+    // if/when the API starts returning something like elapsed
+    // vs. scheduled running time for the current section, use
+    // that here to interpolate between currentElement and the
+    // next station element instead of snapping to currentElement.
+
+    trainMarker.style.display =
         "";
 
-    let sectionProgress =
-        Number(
-            train.section_progress ??
-            train.sectionProgress ??
-            0
-        );
+    trainMarker.style.position =
+        "absolute";
 
-    if (
-        sectionProgress < 0 ||
-        sectionProgress > 1
-    ) {
+    const networkRect =
+        network.getBoundingClientRect();
 
-        sectionProgress = 0;
+    const currentRect =
+        currentElement.getBoundingClientRect();
 
-    }
-
-    /* =====================================
-       FIND CURRENT / NEXT STATION INDEX
-    ===================================== */
-
-    let currentIndex =
-        points.findIndex(
-            point => {
-
-                const station = point.station;
-
-                const code =
-                    station.to_code ||
-                    station.code ||
-                    station.station_code ||
-                    "";
-
-                return code === currentCode;
-
-            }
-        );
-
-    if (currentIndex < 0) {
-
-        currentIndex = 0;
-
-    }
-
-    let nextIndex =
-        currentIndex + 1;
-
-    if (nextIndex >= points.length) {
-
-        nextIndex = currentIndex;
-
-    }
-
-    /* =====================================
-       MOVE THE TRAIN MARKER ALONG THE
-       ACTUAL CURVED PATH (not a straight
-       line) USING THE SVG PATH GEOMETRY
-    ===================================== */
-
-    const totalLength =
-        path.getTotalLength();
-
-    const segmentCount =
-        points.length - 1 || 1;
-
-    const segmentStart =
-        (currentIndex / segmentCount) * totalLength;
-
-    const segmentEnd =
-        (nextIndex / segmentCount) * totalLength;
-
-    const targetLength =
-        Math.max(
-            0,
-            Math.min(
-                totalLength,
-                segmentStart +
-                (segmentEnd - segmentStart) * sectionProgress
-            )
-        );
-
-    const trainPoint =
-        path.getPointAtLength(
-            targetLength
-        );
-
-    trainMarker.setAttribute(
-        "transform",
-        `translate(${trainPoint.x}, ${trainPoint.y})`
-    );
+    trainMarker.style.top =
+        `${
+            currentRect.top
+            - networkRect.top
+            + (currentRect.height / 2)
+        }px`;
 
     console.log(
-        "Train moved to progress:",
-        sectionProgress,
-        "| section:",
+        "Train marker placed at station:",
+        stationList[currentIndex] &&
+            stationList[currentIndex].name,
+        "(index",
         currentIndex,
-        "->",
-        nextIndex
+        "of",
+        stationList.length,
+        ")"
     );
 
 }
@@ -3759,13 +3796,6 @@ document.addEventListener(
     "DOMContentLoaded",
 
     () => {
-
-
-        /* =====================================
-           DEFAULT LIVE NETWORK (GUNTUR)
-        ===================================== */
-
-        renderDefaultRailwayNetwork();
 
 
         /* =====================================
@@ -3878,6 +3908,9 @@ document.addEventListener(
     }
 
 );
+function apiUrl(path) {
+    return `${API_BASE}${path}`;
+}
 async function loadActiveEvents() {
 
     try {
@@ -3949,6 +3982,27 @@ async function submitSimulationEvent(eventData) {
 
         throw error;
     }
+}
+async function clearActiveEvents() {
+
+    const response = await fetch(
+        apiUrl("/api/events"),
+        {
+            method: "DELETE"
+        }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+
+        throw new Error(
+            data.error ||
+            "Failed to clear events"
+        );
+    }
+
+    return data;
 }
 async function clearActiveEvents() {
 
@@ -4044,7 +4098,10 @@ function startLiveRefresh() {
                         data.train;
 
 
+                    // FIX: same predictions/forecast field
+                    // mismatch as in forecast() above.
                     liveStationForecast =
+                        data.predictions ||
                         data.forecast ||
                         [];
 
@@ -4076,10 +4133,7 @@ function startLiveRefresh() {
 
                     renderRailwayNetwork(
 
-                        withCurrentOriginStation(
-                            liveStationForecast,
-                            liveTrainData
-                        ),
+                        liveStationForecast,
 
                         liveTrainData
 
@@ -4088,10 +4142,7 @@ function startLiveRefresh() {
 
                     updateLiveTrainPositionFromAPI(
 
-                        withCurrentOriginStation(
-                            liveStationForecast,
-                            liveTrainData
-                        ),
+                        liveStationForecast,
 
                         liveTrainData
 
