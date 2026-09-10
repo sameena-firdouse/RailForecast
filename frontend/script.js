@@ -15,11 +15,20 @@ let currentSimulation = null;
    API CONFIGURATION
 ========================================= */
 
+// FIX: config.js sets window.RAILFORECAST_API to the deployed
+// Render backend URL, but this was never actually read here.
+// On any non-localhost origin (e.g. the Vercel-hosted frontend),
+// API_BASE fell back to "", which made every fetch() call hit a
+// path on the FRONTEND's own domain (e.g. Vercel) instead of the
+// backend - Vercel/Render then returns its own HTML "page not
+// found" response for that path, and response.json() throws
+// "Unexpected token 'T', "The page c"... is not valid JSON"
+// because it's trying to parse that HTML page as JSON.
 const API_BASE =
     window.location.hostname === "localhost" ||
     window.location.hostname === "127.0.0.1"
         ? "http://127.0.0.1:5000"
-        : "";
+        : (window.RAILFORECAST_API || "");
 
 
 /* =========================================
