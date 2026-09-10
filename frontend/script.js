@@ -15,20 +15,11 @@ let currentSimulation = null;
    API CONFIGURATION
 ========================================= */
 
-// FIX: config.js sets window.RAILFORECAST_API to the deployed
-// Render backend URL, but this was never actually read here.
-// On any non-localhost origin (e.g. the Vercel-hosted frontend),
-// API_BASE fell back to "", which made every fetch() call hit a
-// path on the FRONTEND's own domain (e.g. Vercel) instead of the
-// backend - Vercel/Render then returns its own HTML "page not
-// found" response for that path, and response.json() throws
-// "Unexpected token 'T', "The page c"... is not valid JSON"
-// because it's trying to parse that HTML page as JSON.
 const API_BASE =
     window.location.hostname === "localhost" ||
     window.location.hostname === "127.0.0.1"
         ? "http://127.0.0.1:5000"
-        : (window.RAILFORECAST_API || "");
+        : "";
 
 
 /* =========================================
@@ -63,13 +54,9 @@ async function loadLiveForecast(
     date
 ) {
 
-    // FIX: backend route is GET /api/forecast/<train> (train is a
-    // path segment, not a query param). The previous
-    // `/api/forecast?train=...` URL matched no Flask route and
-    // 404'd on every single call.
     const url =
         apiUrl(
-            `/api/forecast/${encodeURIComponent(trainNumber)}${date ? `?date=${encodeURIComponent(date)}` : ""}`
+            `/api/forecast?train=${encodeURIComponent(trainNumber)}&date=${encodeURIComponent(date)}`
         );
 
     console.log(
@@ -789,12 +776,7 @@ async function forecast() {
             null;
 
 
-        // FIX: the backend returns the per-section forecast as
-        // `predictions` (see app.py get_forecast()). It never
-        // returns `forecast` / `station_forecast` / `stations`,
-        // so this always evaluated to [] before.
         liveStationForecast =
-            data.predictions ||
             data.forecast ||
             data.station_forecast ||
             data.stations ||
@@ -1035,15 +1017,11 @@ function updateTrainStatus(
 
                 train.from ||
 
-                train.current_name ||
-
                 ""
 
             } → ${
 
                 train.to ||
-
-                train.next_name ||
 
                 ""
 
@@ -1054,14 +1032,7 @@ function updateTrainStatus(
 
     if (cur) {
 
-        // FIX: backend's normalize() returns current_name /
-        // current_code, never current_station / currentStation,
-        // so this always fell through to the placeholder before.
         cur.textContent =
-
-            train.current_name ||
-
-            train.current_code ||
 
             train.current_station ||
 
@@ -1075,14 +1046,9 @@ function updateTrainStatus(
     if (delay) {
 
 
-        // FIX: backend field is `delay`, not current_delay /
-        // currentDelay - those never existed, so this always
-        // showed "On time" regardless of the real delay.
         const currentDelay =
 
             Number(
-
-                train.delay ??
 
                 train.current_delay ??
 
@@ -1107,10 +1073,6 @@ function updateTrainStatus(
     if (next) {
 
         next.textContent =
-
-            train.next_name ||
-
-            train.next_code ||
 
             train.next_station ||
 
@@ -1155,11 +1117,6 @@ function updateJourney(
     }
 
 
-    // FIX: backend never returns train.progress /
-    // journey_progress - those fields don't exist, so this was
-    // always 0%. Derive real progress from how far along the
-    // predicted section list (liveStationForecast) the train's
-    // current station actually is.
     const progress =
 
         Number(
@@ -1168,10 +1125,7 @@ function updateJourney(
 
             train.journey_progress ??
 
-            computeJourneyProgressPercent(
-                liveStationForecast,
-                train
-            )
+            0
 
         );
 
@@ -1229,14 +1183,6 @@ function updateJourney(
 
             train.source ||
 
-            (
-                liveStationForecast[0] &&
-                (
-                    liveStationForecast[0].from_station ||
-                    liveStationForecast[0].from_code
-                )
-            ) ||
-
             "Source";
 
     }
@@ -1249,14 +1195,6 @@ function updateJourney(
             train.to ||
 
             train.destination ||
-
-            (
-                liveStationForecast.length > 0 &&
-                (
-                    liveStationForecast[liveStationForecast.length - 1].to_station ||
-                    liveStationForecast[liveStationForecast.length - 1].to_code
-                )
-            ) ||
 
             "Destination";
 
@@ -1284,10 +1222,6 @@ function updateJourney(
     if (journeyStatus) {
 
         const currentStation =
-
-            train.current_name ||
-
-            train.current_code ||
 
             train.current_station ||
 
@@ -1655,20 +1589,9 @@ function renderForecastTimeline(
         station => {
 
 
-            // FIX: forecastData items are the backend's
-            // `predictions` records - per-SECTION legs with
-            // from_station/to_station/predicted_eta/etc. - not
-            // a flat station shape with .station/.delay/.eta.
-            // Because of the safe `||`/`??` fallbacks this never
-            // threw, it just silently rendered every row as
-            // "Unknown Station" / "--" / "On time", which is why
-            // nothing LIVE ever appeared even once the API call
-            // itself started succeeding.
             const delay =
 
                 Number(
-
-                    station.predicted_delay_min ??
 
                     station.delay ??
 
@@ -1724,8 +1647,8 @@ function renderForecastTimeline(
 
             if (
 
-                status === "Current" ||
-                status === "SLIGHT DELAY"
+                status ===
+                "Current"
 
             ) {
 
@@ -1737,24 +1660,13 @@ function renderForecastTimeline(
 
             if (
 
-                status === "Upcoming"
+                status ===
+                "Upcoming"
 
             ) {
 
                 statusClass =
                     "status-mid";
-
-            }
-
-
-            if (
-
-                status === "DELAYED"
-
-            ) {
-
-                statusClass =
-                    "status-bad";
 
             }
 
@@ -1799,8 +1711,6 @@ function renderForecastTimeline(
 
                         ${
 
-                            station.to_station ||
-
                             station.station ||
 
                             station.station_name ||
@@ -1815,8 +1725,6 @@ function renderForecastTimeline(
                     <div class="station-code">
 
                         ${
-
-                            station.to_code ||
 
                             station.code ||
 
@@ -1837,8 +1745,6 @@ function renderForecastTimeline(
 
                         ${
 
-                            station.predicted_eta ||
-
                             station.predicted ||
 
                             station.predicted_time ||
@@ -1857,8 +1763,6 @@ function renderForecastTimeline(
                         Scheduled:
 
                         ${
-
-                            station.scheduled_eta ||
 
                             station.scheduled ||
 
@@ -1918,161 +1822,11 @@ function renderForecastTimeline(
 
 }
 /* =========================================
-   JOURNEY STATE HELPERS
-   ---------------------------------------
-   The backend returns a per-SECTION list
-   (from_station -> to_station legs), not a
-   flat per-station list. These helpers turn
-   that into an ordered, de-duplicated station
-   list plus the train's position within it,
-   so every consumer (network view, journey
-   progress bar, train marker) agrees on the
-   same journey state.
-========================================= */
-
-function buildStationListFromSections(
-    sections = []
-) {
-
-    if (!sections || sections.length === 0) {
-
-        return [];
-
-    }
-
-    const list = [];
-
-    const first =
-        sections[0];
-
-    list.push({
-        code:
-            first.from_code ||
-            first.from_station ||
-            "",
-        name:
-            first.from_station ||
-            first.from_code ||
-            "Station"
-    });
-
-    sections.forEach(section => {
-
-        const code =
-            section.to_code ||
-            section.to_station ||
-            "";
-
-        const name =
-            section.to_station ||
-            section.to_code ||
-            "Station";
-
-        const last =
-            list[list.length - 1];
-
-        // Avoid duplicating a station when
-        // consecutive sections share an
-        // endpoint.
-        if (
-            !last ||
-            (last.code !== code && last.name !== name)
-        ) {
-
-            list.push({ code, name });
-
-        }
-
-    });
-
-    return list;
-
-}
-
-
-function findCurrentStationIndex(
-    stationList = [],
-    train = {}
-) {
-
-    const currentCode =
-        train.current_code ||
-        train.currentCode ||
-        "";
-
-    const currentName =
-        train.current_name ||
-        train.currentName ||
-        "";
-
-    if (!currentCode && !currentName) {
-
-        return -1;
-
-    }
-
-    let index = stationList.findIndex(
-        station =>
-            currentCode &&
-            station.code === currentCode
-    );
-
-    if (index === -1 && currentName) {
-
-        index = stationList.findIndex(
-            station =>
-                station.name === currentName
-        );
-
-    }
-
-    return index;
-
-}
-
-
-function computeJourneyProgressPercent(
-    sections = [],
-    train = {}
-) {
-
-    const stationList =
-        buildStationListFromSections(
-            sections
-        );
-
-    if (stationList.length <= 1) {
-
-        return 0;
-
-    }
-
-    const currentIndex =
-        findCurrentStationIndex(
-            stationList,
-            train
-        );
-
-    if (currentIndex === -1) {
-
-        return 0;
-
-    }
-
-    return (
-        (currentIndex / (stationList.length - 1))
-        * 100
-    );
-
-}
-
-
-/* =========================================
    RENDER LIVE RAILWAY NETWORK
 ========================================= */
 
 function renderRailwayNetwork(
-    sections = [],
+    stations = [],
     train = {}
 ) {
 
@@ -2094,33 +1848,21 @@ function renderRailwayNetwork(
         "";
 
 
-    // FIX: `sections` is the backend's `predictions` array -
-    // a list of from_station -> to_station legs, not a flat
-    // per-station list. Derive the full, ordered station list
-    // from it so every station stays visible (Main Problem 1),
-    // instead of bailing out here because the old code expected
-    // fields (`station.code`, `station.station`) that never
-    // existed on a section record.
-    const stationList =
-        buildStationListFromSections(
-            sections
-        );
+    if (
 
-    if (stationList.length === 0) {
+        !stations ||
+
+        stations.length === 0
+
+    ) {
 
         return;
 
     }
 
-    const currentIndex =
-        findCurrentStationIndex(
-            stationList,
-            train
-        );
 
-
-    stationList.forEach(
-        (station, index) => {
+    stations.forEach(
+        station => {
 
 
             const stationElement =
@@ -2134,54 +1876,55 @@ function renderRailwayNetwork(
                 "network-station";
 
 
+            const code =
+
+                station.code ||
+
+                station.station_code ||
+
+                "";
+
+
             stationElement.dataset.code =
-                station.code;
+                code;
 
 
-            // FIX: journey state is now derived from position
-            // relative to the train's real current station,
-            // instead of a single "is this THE current station"
-            // check that left everything else unlabeled.
-            let state = "upcoming";
+            const name =
 
-            if (currentIndex === -1) {
+                station.station ||
 
-                // No live current-station data at all
-                // (e.g. journey not started / API unavailable).
-                // Still show every station, just without a
-                // completed/current split.
-                state = "upcoming";
+                station.station_name ||
 
-            } else if (index < currentIndex) {
-
-                state = "completed";
-
-            } else if (index === currentIndex) {
-
-                state = "current";
-
-            } else if (index === currentIndex + 1) {
-
-                state = "next";
-
-            }
+                "Station";
 
 
-            const icon =
-                state === "current"
-                    ? "🚆"
-                    : state === "completed"
-                        ? "✓"
-                        : state === "next"
-                            ? "→"
-                            : "○";
+            const currentCode =
+
+                train.current_code ||
+
+                train.currentCode ||
+
+                "";
+
+
+            const isCurrent =
+
+                code === currentCode;
 
 
             stationElement.innerHTML = `
 
                 <div class="network-station-marker">
 
-                    ${icon}
+                    ${
+
+                        isCurrent
+
+                            ? "🚆"
+
+                            : "●"
+
+                    }
 
                 </div>
 
@@ -2190,14 +1933,14 @@ function renderRailwayNetwork(
 
                     <b>
 
-                        ${station.code}
+                        ${code}
 
                     </b>
 
 
                     <span>
 
-                        ${station.name}
+                        ${name}
 
                     </span>
 
@@ -2206,11 +1949,7 @@ function renderRailwayNetwork(
             `;
 
 
-            stationElement.classList.add(
-                `network-station-${state}`
-            );
-
-            if (state === "current") {
+            if (isCurrent) {
 
                 stationElement.classList.add(
                     "current-network-station"
@@ -2230,9 +1969,6 @@ function renderRailwayNetwork(
 
     /* =====================================
        ADD LIVE TRAIN MARKER
-       (position is set separately by
-       updateLiveTrainPositionFromAPI, once
-       these station elements exist in the DOM)
     ===================================== */
 
     const trainMarker =
@@ -3694,7 +3430,7 @@ function capitalize(text) {
 ========================================= */
 
 function updateLiveTrainPositionFromAPI(
-    sections,
+    stations,
     train
 ) {
 
@@ -3706,121 +3442,398 @@ function updateLiveTrainPositionFromAPI(
     }
 
 
-    const network =
-        document.getElementById(
-            "rail-network"
+    const currentCode =
+
+        train.current_code ||
+
+        train.currentCode ||
+
+        "";
+
+
+    const nextCode =
+
+        train.next_code ||
+
+        train.nextCode ||
+
+        "";
+
+
+    let sectionProgress =
+
+        Number(
+
+            train.section_progress ??
+
+            train.sectionProgress ??
+
+            0
+
         );
 
 
-    const trainMarker =
-        document.getElementById(
-            "live-network-train"
+    /* =====================================
+       FIND NEXT CODE IF API DOESN'T RETURN IT
+    ===================================== */
+
+    let nextStationCode =
+        nextCode;
+
+
+    if (!nextStationCode) {
+
+
+        const currentIndex =
+
+            stations.findIndex(
+                station =>
+
+                    (
+
+                        station.code ||
+
+                        station.station_code
+
+                    ) === currentCode
+            );
+
+
+        if (
+
+            currentIndex >= 0 &&
+
+            currentIndex < stations.length - 1
+
+        ) {
+
+
+            nextStationCode =
+
+                stations[
+                    currentIndex + 1
+                ].code ||
+
+                stations[
+                    currentIndex + 1
+                ].station_code;
+
+        }
+
+    }
+
+
+    /* =====================================
+       FALLBACK
+    ===================================== */
+
+    if (
+
+        sectionProgress < 0 ||
+
+        sectionProgress > 1
+
+    ) {
+
+        sectionProgress =
+            0;
+
+    }
+
+
+    updateLiveTrainPosition(
+
+        currentCode,
+
+        nextStationCode,
+
+        sectionProgress
+
+    );
+
+
+
+
+    if (!network || !train) {
+
+        console.log(
+            "Rail network or train element not found."
         );
-
-
-    if (!network || !trainMarker) {
 
         return;
 
     }
 
 
-    // FIX: this function previously called
-    // updateLiveTrainPosition(...) - a function that is not
-    // defined anywhere in this file - and was immediately
-    // followed by an orphaned duplicate code block (re-declaring
-    // `stations` as a const, which is the same name as this
-    // function's own parameter). That duplicate declaration was
-    // a hard SyntaxError, which meant this entire script.js file
-    // failed to parse in the browser, so NONE of the JavaScript
-    // on the page ever ran. This rewrite removes the dead call
-    // and the orphaned block, and positions the real
-    // #live-network-train marker over the train's real current
-    // station element.
-
-    const stationList =
-        buildStationListFromSections(
-            sections
-        );
-
-    const currentIndex =
-        findCurrentStationIndex(
-            stationList,
-            train
-        );
-
-    if (currentIndex === -1) {
-
-        // No live current-station data yet (journey not
-        // started, or the Weather/Live API is temporarily
-        // unavailable). Keep the marker hidden rather than
-        // guessing a position.
-        trainMarker.style.display =
-            "none";
-
-        return;
-
-    }
-
-    const stationElements =
+    const stations =
         network.querySelectorAll(
             ".network-station"
         );
 
-    const currentElement =
-        stationElements[currentIndex];
+
+    /* =====================================
+       NORMALIZE STATION NAMES
+    ===================================== */
+
+    function normalizeStation(value) {
+
+        return String(value || "")
+
+            .toUpperCase()
+
+            .replace(
+                /\bJUNCTION\b/g,
+                ""
+            )
+
+            .replace(
+                /\s+/g,
+                " "
+            )
+
+            .trim();
+
+    }
+
+
+    const normalizedCurrent =
+        normalizeStation(
+            currentStation
+        );
+
+
+    const normalizedNext =
+        normalizeStation(
+            nextStation
+        );
+
+
+    let currentElement =
+        null;
+
+
+    let nextElement =
+        null;
+
+
+    /* =====================================
+       FIND CURRENT AND NEXT STATIONS
+    ===================================== */
+
+    stations.forEach(station => {
+
+
+        const stationCode =
+            normalizeStation(
+                station.dataset.code
+            );
+
+
+        const stationName =
+            normalizeStation(
+                station.innerText
+            );
+
+
+        /* CURRENT STATION */
+
+        if (
+
+            stationCode ===
+            normalizedCurrent ||
+
+            stationName ===
+            normalizedCurrent ||
+
+            stationName.includes(
+                normalizedCurrent
+            ) ||
+
+            normalizedCurrent.includes(
+                stationName
+            )
+
+        ) {
+
+            currentElement =
+                station;
+
+        }
+
+
+        /* NEXT STATION */
+
+        if (
+
+            stationCode ===
+            normalizedNext ||
+
+            stationName ===
+            normalizedNext ||
+
+            stationName.includes(
+                normalizedNext
+            ) ||
+
+            normalizedNext.includes(
+                stationName
+            )
+
+        ) {
+
+            nextElement =
+                station;
+
+        }
+
+
+    });
+
+
+    /* =====================================
+       CURRENT STATION NOT FOUND
+    ===================================== */
 
     if (!currentElement) {
 
-        trainMarker.style.display =
-            "none";
+        console.log(
+            "Current station not found:",
+            currentStation
+        );
 
         return;
 
     }
 
-    // NOTE: the backend does not currently return a
-    // sub-section progress fraction (normalize() in app.py has
-    // no such field), so there is no real signal to interpolate
-    // between the current and next station. Rather than
-    // fabricate a position, the marker is placed exactly at the
-    // train's actual current station - the one thing we do
-    // know for certain from live data.
-    //
-    // TODO (future enhancement, needs a small backend addition):
-    // if/when the API starts returning something like elapsed
-    // vs. scheduled running time for the current section, use
-    // that here to interpolate between currentElement and the
-    // next station element instead of snapping to currentElement.
 
-    trainMarker.style.display =
-        "";
-
-    trainMarker.style.position =
-        "absolute";
+    /* =====================================
+       GET NETWORK POSITION
+    ===================================== */
 
     const networkRect =
         network.getBoundingClientRect();
 
+
     const currentRect =
         currentElement.getBoundingClientRect();
 
-    trainMarker.style.top =
-        `${
-            currentRect.top
-            - networkRect.top
-            + (currentRect.height / 2)
-        }px`;
+
+    const startPosition =
+
+        currentRect.top
+
+        -
+
+        networkRect.top
+
+        +
+
+        (
+            currentRect.height / 2
+        );
+
+
+    let endPosition =
+        startPosition;
+
+
+    /* =====================================
+       NEXT STATION POSITION
+    ===================================== */
+
+    if (nextElement) {
+
+
+        const nextRect =
+            nextElement.getBoundingClientRect();
+
+
+        endPosition =
+
+            nextRect.top
+
+            -
+
+            networkRect.top
+
+            +
+
+            (
+                nextRect.height / 2
+            );
+
+
+    }
+
+
+    /* =====================================
+       KEEP PROGRESS BETWEEN 0 AND 1
+    ===================================== */
+
+    sectionProgress =
+
+        Math.max(
+
+            0,
+
+            Math.min(
+
+                1,
+
+                sectionProgress
+
+            )
+
+        );
+
+
+    /* =====================================
+       CALCULATE LIVE TRAIN POSITION
+    ===================================== */
+
+    const trainPosition =
+
+        startPosition
+
+        +
+
+        (
+
+            endPosition
+
+            -
+
+            startPosition
+
+        )
+
+        *
+
+        sectionProgress;
+
+
+    /* =====================================
+       MOVE TRAIN
+    ===================================== */
+
+    train.style.top =
+        `${trainPosition}px`;
+
 
     console.log(
-        "Train marker placed at station:",
-        stationList[currentIndex] &&
-            stationList[currentIndex].name,
-        "(index",
-        currentIndex,
-        "of",
-        stationList.length,
-        ")"
+
+        "Train moved to:",
+
+        currentStation,
+
+        "→",
+
+        nextStation,
+
+        "| Progress:",
+
+        sectionProgress
+
     );
 
 }
@@ -4137,10 +4150,7 @@ function startLiveRefresh() {
                         data.train;
 
 
-                    // FIX: same predictions/forecast field
-                    // mismatch as in forecast() above.
                     liveStationForecast =
-                        data.predictions ||
                         data.forecast ||
                         [];
 
