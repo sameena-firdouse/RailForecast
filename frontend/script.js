@@ -56,7 +56,7 @@ async function loadLiveForecast(
 
     const url =
         apiUrl(
-            `/api/forecast?train=${encodeURIComponent(trainNumber)}&date=${encodeURIComponent(date)}`
+            `/api/forecast/${encodeURIComponent(trainNumber)}?date=${encodeURIComponent(date)}`
         );
 
     console.log(
