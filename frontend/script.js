@@ -19,7 +19,7 @@ const API_BASE =
     window.location.hostname === "localhost" ||
     window.location.hostname === "127.0.0.1"
         ? "http://127.0.0.1:5000"
-        : (window.RAILFORECAST_API || "");
+        : "";
 
 
 /* =========================================
@@ -56,7 +56,7 @@ async function loadLiveForecast(
 
     const url =
         apiUrl(
-            `/api/forecast/${encodeURIComponent(trainNumber)}?date=${encodeURIComponent(date)}`
+            `/api/forecast?train=${encodeURIComponent(trainNumber)}&date=${encodeURIComponent(date)}`
         );
 
     console.log(
@@ -593,7 +593,7 @@ function home() {
 
 function passenger() {
 
-    showScreen("passenger-login");
+    showScreen("passenger");
 
 }
 
@@ -613,238 +613,6 @@ function simulation() {
 
 
 function authorizedAPI() {
-
-    showScreen("department-api-login");
-
-}
-
-
-/* =========================================
-   AUTH STATE
-========================================= */
-
-let passengerSession = null;
-let departmentSession = null;
-
-
-/* =========================================
-   PASSENGER LOGIN
-========================================= */
-
-function passengerLogin() {
-
-    const identifierInput =
-        document.getElementById(
-            "passenger-identifier"
-        );
-
-    const errBox =
-        document.getElementById(
-            "passenger-login-err"
-        );
-
-    const identifier =
-        (identifierInput.value || "").trim();
-
-
-    const emailPattern =
-        /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    const mobilePattern =
-        /^[6-9]\d{9}$/;
-
-    const isEmail =
-        emailPattern.test(identifier);
-
-    const isMobile =
-        mobilePattern.test(
-            identifier.replace(/[\s-]/g, "")
-        );
-
-
-    if (!identifier) {
-
-        errBox.textContent =
-            "Please enter your mobile number or email address.";
-
-        errBox.classList.remove("hide");
-
-        return;
-
-    }
-
-
-    if (!isEmail && !isMobile) {
-
-        errBox.textContent =
-            "Enter a valid 10-digit mobile number or a valid email address.";
-
-        errBox.classList.remove("hide");
-
-        return;
-
-    }
-
-
-    errBox.classList.add("hide");
-
-    passengerSession = {
-
-        identifier: identifier,
-
-        type: isEmail ? "email" : "mobile"
-
-    };
-
-    showScreen("passenger");
-
-}
-
-
-/* =========================================
-   RAILWAY AUTHORIZED API LOGIN
-========================================= */
-
-function departmentApiLogin() {
-
-    const employeeIdInput =
-        document.getElementById(
-            "dept-employee-id"
-        );
-
-    const emailInput =
-        document.getElementById(
-            "dept-official-email"
-        );
-
-    const passwordInput =
-        document.getElementById(
-            "dept-password"
-        );
-
-    const roleSelect =
-        document.getElementById(
-            "dept-role"
-        );
-
-    const errBox =
-        document.getElementById(
-            "dept-login-err"
-        );
-
-
-    const employeeId =
-        (employeeIdInput.value || "").trim();
-
-    const officialEmail =
-        (emailInput.value || "").trim();
-
-    const password =
-        passwordInput.value || "";
-
-    const role =
-        roleSelect.value;
-
-
-    const emailPattern =
-        /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-
-    if (!employeeId) {
-
-        errBox.textContent =
-            "Please enter your Employee ID.";
-
-        errBox.classList.remove("hide");
-
-        return;
-
-    }
-
-
-    if (!emailPattern.test(officialEmail)) {
-
-        errBox.textContent =
-            "Please enter a valid official email address.";
-
-        errBox.classList.remove("hide");
-
-        return;
-
-    }
-
-
-    if (!password || password.length < 6) {
-
-        errBox.textContent =
-            "Password must be at least 6 characters.";
-
-        errBox.classList.remove("hide");
-
-        return;
-
-    }
-
-
-    if (!role) {
-
-        errBox.textContent =
-            "Please select your role for role-based access.";
-
-        errBox.classList.remove("hide");
-
-        return;
-
-    }
-
-
-    errBox.classList.add("hide");
-
-    departmentSession = {
-
-        employeeId: employeeId,
-
-        officialEmail: officialEmail,
-
-        role: role
-
-    };
-
-
-    const roleLabels = {
-
-        station_master: "Station Master",
-
-        section_controller: "Section Controller",
-
-        divisional_manager: "Divisional Manager",
-
-        system_admin: "System Administrator",
-
-        data_analyst: "Data Analyst"
-
-    };
-
-
-    const statusBadge =
-        document.getElementById(
-            "dept-login-status"
-        );
-
-    const statusText =
-        document.getElementById(
-            "dept-login-status-text"
-        );
-
-    if (statusBadge && statusText) {
-
-        statusText.textContent =
-            `${roleLabels[role] || role} · ${employeeId}`;
-
-        statusBadge.classList.remove("hide");
-
-    }
-
 
     showScreen("authorized-api");
 
@@ -3666,11 +3434,13 @@ function updateLiveTrainPositionFromAPI(
     train
 ) {
 
+
     if (!train) {
 
         return;
 
     }
+
 
     const currentCode =
 
@@ -3680,6 +3450,7 @@ function updateLiveTrainPositionFromAPI(
 
         "";
 
+
     const nextCode =
 
         train.next_code ||
@@ -3687,6 +3458,7 @@ function updateLiveTrainPositionFromAPI(
         train.nextCode ||
 
         "";
+
 
     let sectionProgress =
 
@@ -3700,6 +3472,7 @@ function updateLiveTrainPositionFromAPI(
 
         );
 
+
     /* =====================================
        FIND NEXT CODE IF API DOESN'T RETURN IT
     ===================================== */
@@ -3707,7 +3480,9 @@ function updateLiveTrainPositionFromAPI(
     let nextStationCode =
         nextCode;
 
+
     if (!nextStationCode) {
+
 
         const currentIndex =
 
@@ -3723,6 +3498,7 @@ function updateLiveTrainPositionFromAPI(
                     ) === currentCode
             );
 
+
         if (
 
             currentIndex >= 0 &&
@@ -3730,6 +3506,7 @@ function updateLiveTrainPositionFromAPI(
             currentIndex < stations.length - 1
 
         ) {
+
 
             nextStationCode =
 
@@ -3744,6 +3521,7 @@ function updateLiveTrainPositionFromAPI(
         }
 
     }
+
 
     /* =====================================
        FALLBACK
@@ -3762,6 +3540,7 @@ function updateLiveTrainPositionFromAPI(
 
     }
 
+
     updateLiveTrainPosition(
 
         currentCode,
@@ -3772,30 +3551,10 @@ function updateLiveTrainPositionFromAPI(
 
     );
 
-}
 
 
-/* =========================================
-   UPDATE LIVE TRAIN MARKER POSITION
-========================================= */
 
-function updateLiveTrainPosition(
-    currentStation,
-    nextStation,
-    sectionProgress
-) {
-
-    const network =
-        document.getElementById(
-            "rail-network"
-        );
-
-    const trainMarker =
-        document.getElementById(
-            "live-network-train"
-        );
-
-    if (!network || !trainMarker) {
+    if (!network || !train) {
 
         console.log(
             "Rail network or train element not found."
@@ -3805,10 +3564,12 @@ function updateLiveTrainPosition(
 
     }
 
-    const stationEls =
+
+    const stations =
         network.querySelectorAll(
             ".network-station"
         );
+
 
     /* =====================================
        NORMALIZE STATION NAMES
@@ -3834,37 +3595,45 @@ function updateLiveTrainPosition(
 
     }
 
+
     const normalizedCurrent =
         normalizeStation(
             currentStation
         );
+
 
     const normalizedNext =
         normalizeStation(
             nextStation
         );
 
+
     let currentElement =
         null;
 
+
     let nextElement =
         null;
+
 
     /* =====================================
        FIND CURRENT AND NEXT STATIONS
     ===================================== */
 
-    stationEls.forEach(station => {
+    stations.forEach(station => {
+
 
         const stationCode =
             normalizeStation(
                 station.dataset.code
             );
 
+
         const stationName =
             normalizeStation(
                 station.innerText
             );
+
 
         /* CURRENT STATION */
 
@@ -3891,6 +3660,7 @@ function updateLiveTrainPosition(
 
         }
 
+
         /* NEXT STATION */
 
         if (
@@ -3916,7 +3686,9 @@ function updateLiveTrainPosition(
 
         }
 
+
     });
+
 
     /* =====================================
        CURRENT STATION NOT FOUND
@@ -3933,6 +3705,7 @@ function updateLiveTrainPosition(
 
     }
 
+
     /* =====================================
        GET NETWORK POSITION
     ===================================== */
@@ -3940,8 +3713,10 @@ function updateLiveTrainPosition(
     const networkRect =
         network.getBoundingClientRect();
 
+
     const currentRect =
         currentElement.getBoundingClientRect();
+
 
     const startPosition =
 
@@ -3957,8 +3732,10 @@ function updateLiveTrainPosition(
             currentRect.height / 2
         );
 
+
     let endPosition =
         startPosition;
+
 
     /* =====================================
        NEXT STATION POSITION
@@ -3966,8 +3743,10 @@ function updateLiveTrainPosition(
 
     if (nextElement) {
 
+
         const nextRect =
             nextElement.getBoundingClientRect();
+
 
         endPosition =
 
@@ -3983,7 +3762,9 @@ function updateLiveTrainPosition(
                 nextRect.height / 2
             );
 
+
     }
+
 
     /* =====================================
        KEEP PROGRESS BETWEEN 0 AND 1
@@ -4004,6 +3785,7 @@ function updateLiveTrainPosition(
             )
 
         );
+
 
     /* =====================================
        CALCULATE LIVE TRAIN POSITION
@@ -4029,12 +3811,14 @@ function updateLiveTrainPosition(
 
         sectionProgress;
 
+
     /* =====================================
-       MOVE TRAIN MARKER
+       MOVE TRAIN
     ===================================== */
 
-    trainMarker.style.top =
+    train.style.top =
         `${trainPosition}px`;
+
 
     console.log(
 
