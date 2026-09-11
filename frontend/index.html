@@ -248,6 +248,99 @@
 
 
 <!-- =========================================
+     PASSENGER LOGIN PAGE
+========================================= -->
+
+<section
+    id="passenger-login"
+    class="screen hide"
+>
+
+
+    <button
+        class="back-btn"
+        onclick="home()"
+    >
+        ← Back
+    </button>
+
+
+
+    <div class="page-top">
+
+        <span class="section-label">
+            PASSENGER ACCESS
+        </span>
+
+        <h1 class="page-title">
+            Passenger Login
+        </h1>
+
+        <p class="page-subtitle">
+
+            Sign in with your mobile number or email address
+            to track your journey and view AI-powered ETA
+            predictions.
+
+        </p>
+
+    </div>
+
+
+
+    <div class="search-card card">
+
+        <div class="search-title">
+
+            <div>
+
+                <span class="section-label">
+                    SIGN IN
+                </span>
+
+                <h2>
+                    Passenger Sign In
+                </h2>
+
+            </div>
+
+        </div>
+
+
+        <label>
+            Mobile Number OR Email Address
+        </label>
+
+        <input
+            id="passenger-identifier"
+            placeholder="Example: 9876543210 or you@example.com"
+        >
+
+
+        <div
+            id="passenger-login-err"
+            class="error hide"
+        ></div>
+
+
+        <button
+            class="primary-btn"
+            onclick="passengerLogin()"
+        >
+
+            🔐 Login
+
+        </button>
+
+    </div>
+
+
+</section>
+
+
+
+
+<!-- =========================================
      PASSENGER SEARCH PAGE
 ========================================= -->
 
@@ -1882,6 +1975,157 @@
 
 
 <!-- =========================================
+     RAILWAY AUTHORIZED API LOGIN PAGE
+========================================= -->
+
+<section
+    id="department-api-login"
+    class="screen hide"
+>
+
+
+    <button
+        class="back-btn"
+        onclick="department()"
+    >
+
+        ← Back to Department
+
+    </button>
+
+
+
+    <div class="page-top">
+
+        <span class="section-label">
+            RAILWAY AUTHORIZED ACCESS
+        </span>
+
+        <h1 class="page-title">
+            Railway Authorized API Login
+        </h1>
+
+        <p class="page-subtitle">
+
+            Verified railway personnel only. Sign in with
+            your official credentials to manage authorized
+            API connections.
+
+        </p>
+
+    </div>
+
+
+
+    <div class="search-card card">
+
+        <div class="search-title">
+
+            <div>
+
+                <span class="section-label">
+                    OFFICIAL SIGN IN
+                </span>
+
+                <h2>
+                    Railway Staff Login
+                </h2>
+
+            </div>
+
+        </div>
+
+
+        <label>
+            Employee ID
+        </label>
+
+        <input
+            id="dept-employee-id"
+            placeholder="Example: RLY-2024-00123"
+        >
+
+
+        <div class="filters">
+
+
+            <div>
+
+                <label>
+                    Official Email
+                </label>
+
+                <input
+                    id="dept-official-email"
+                    type="email"
+                    placeholder="name@indianrailways.gov.in"
+                >
+
+            </div>
+
+
+
+            <div>
+
+                <label>
+                    Password
+                </label>
+
+                <input
+                    id="dept-password"
+                    type="password"
+                    placeholder="Enter your password"
+                >
+
+            </div>
+
+
+
+            <div>
+
+                <label>
+                    Role-Based Access
+                </label>
+
+                <select id="dept-role">
+                    <option value="">Select your role</option>
+                    <option value="station_master">Station Master</option>
+                    <option value="section_controller">Section Controller</option>
+                    <option value="divisional_manager">Divisional Manager</option>
+                    <option value="system_admin">System Administrator</option>
+                    <option value="data_analyst">Data Analyst</option>
+                </select>
+
+            </div>
+
+
+        </div>
+
+
+        <div
+            id="dept-login-err"
+            class="error hide"
+        ></div>
+
+
+        <button
+            class="primary-btn"
+            onclick="departmentApiLogin()"
+        >
+
+            🔐 Secure Login
+
+        </button>
+
+    </div>
+
+
+</section>
+
+
+
+
+<!-- =========================================
      AUTHORIZED API PAGE
 ========================================= -->
 
@@ -1926,6 +2170,18 @@
             awareness and dynamic ETA forecasting.
 
         </p>
+
+
+        <div
+            id="dept-login-status"
+            class="live-status-badge hide"
+        >
+
+            <span class="live-dot"></span>
+
+            <span id="dept-login-status-text"></span>
+
+        </div>
 
 
     </div>
