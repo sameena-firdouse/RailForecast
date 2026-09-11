@@ -3666,13 +3666,11 @@ function updateLiveTrainPositionFromAPI(
     train
 ) {
 
-
     if (!train) {
 
         return;
 
     }
-
 
     const currentCode =
 
@@ -3682,7 +3680,6 @@ function updateLiveTrainPositionFromAPI(
 
         "";
 
-
     const nextCode =
 
         train.next_code ||
@@ -3690,7 +3687,6 @@ function updateLiveTrainPositionFromAPI(
         train.nextCode ||
 
         "";
-
 
     let sectionProgress =
 
@@ -3704,7 +3700,6 @@ function updateLiveTrainPositionFromAPI(
 
         );
 
-
     /* =====================================
        FIND NEXT CODE IF API DOESN'T RETURN IT
     ===================================== */
@@ -3712,9 +3707,7 @@ function updateLiveTrainPositionFromAPI(
     let nextStationCode =
         nextCode;
 
-
     if (!nextStationCode) {
-
 
         const currentIndex =
 
@@ -3730,7 +3723,6 @@ function updateLiveTrainPositionFromAPI(
                     ) === currentCode
             );
 
-
         if (
 
             currentIndex >= 0 &&
@@ -3738,7 +3730,6 @@ function updateLiveTrainPositionFromAPI(
             currentIndex < stations.length - 1
 
         ) {
-
 
             nextStationCode =
 
@@ -3753,7 +3744,6 @@ function updateLiveTrainPositionFromAPI(
         }
 
     }
-
 
     /* =====================================
        FALLBACK
@@ -3772,7 +3762,6 @@ function updateLiveTrainPositionFromAPI(
 
     }
 
-
     updateLiveTrainPosition(
 
         currentCode,
@@ -3783,10 +3772,30 @@ function updateLiveTrainPositionFromAPI(
 
     );
 
+}
 
 
+/* =========================================
+   UPDATE LIVE TRAIN MARKER POSITION
+========================================= */
 
-    if (!network || !train) {
+function updateLiveTrainPosition(
+    currentStation,
+    nextStation,
+    sectionProgress
+) {
+
+    const network =
+        document.getElementById(
+            "rail-network"
+        );
+
+    const trainMarker =
+        document.getElementById(
+            "live-network-train"
+        );
+
+    if (!network || !trainMarker) {
 
         console.log(
             "Rail network or train element not found."
@@ -3796,12 +3805,10 @@ function updateLiveTrainPositionFromAPI(
 
     }
 
-
     const stationEls =
         network.querySelectorAll(
             ".network-station"
         );
-
 
     /* =====================================
        NORMALIZE STATION NAMES
@@ -3827,26 +3834,21 @@ function updateLiveTrainPositionFromAPI(
 
     }
 
-
     const normalizedCurrent =
         normalizeStation(
             currentStation
         );
-
 
     const normalizedNext =
         normalizeStation(
             nextStation
         );
 
-
     let currentElement =
         null;
 
-
     let nextElement =
         null;
-
 
     /* =====================================
        FIND CURRENT AND NEXT STATIONS
@@ -3854,18 +3856,15 @@ function updateLiveTrainPositionFromAPI(
 
     stationEls.forEach(station => {
 
-
         const stationCode =
             normalizeStation(
                 station.dataset.code
             );
 
-
         const stationName =
             normalizeStation(
                 station.innerText
             );
-
 
         /* CURRENT STATION */
 
@@ -3892,7 +3891,6 @@ function updateLiveTrainPositionFromAPI(
 
         }
 
-
         /* NEXT STATION */
 
         if (
@@ -3918,9 +3916,7 @@ function updateLiveTrainPositionFromAPI(
 
         }
 
-
     });
-
 
     /* =====================================
        CURRENT STATION NOT FOUND
@@ -3937,7 +3933,6 @@ function updateLiveTrainPositionFromAPI(
 
     }
 
-
     /* =====================================
        GET NETWORK POSITION
     ===================================== */
@@ -3945,10 +3940,8 @@ function updateLiveTrainPositionFromAPI(
     const networkRect =
         network.getBoundingClientRect();
 
-
     const currentRect =
         currentElement.getBoundingClientRect();
-
 
     const startPosition =
 
@@ -3964,10 +3957,8 @@ function updateLiveTrainPositionFromAPI(
             currentRect.height / 2
         );
 
-
     let endPosition =
         startPosition;
-
 
     /* =====================================
        NEXT STATION POSITION
@@ -3975,10 +3966,8 @@ function updateLiveTrainPositionFromAPI(
 
     if (nextElement) {
 
-
         const nextRect =
             nextElement.getBoundingClientRect();
-
 
         endPosition =
 
@@ -3994,9 +3983,7 @@ function updateLiveTrainPositionFromAPI(
                 nextRect.height / 2
             );
 
-
     }
-
 
     /* =====================================
        KEEP PROGRESS BETWEEN 0 AND 1
@@ -4017,7 +4004,6 @@ function updateLiveTrainPositionFromAPI(
             )
 
         );
-
 
     /* =====================================
        CALCULATE LIVE TRAIN POSITION
@@ -4043,14 +4029,12 @@ function updateLiveTrainPositionFromAPI(
 
         sectionProgress;
 
-
     /* =====================================
-       MOVE TRAIN
+       MOVE TRAIN MARKER
     ===================================== */
 
-    train.style.top =
+    trainMarker.style.top =
         `${trainPosition}px`;
-
 
     console.log(
 
