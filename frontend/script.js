@@ -67,6 +67,18 @@ async function loadLiveForecast(
 
     const response =
         await fetch(url);
+   
+
+if (!response.ok) {
+
+    const errorText = await response.text();
+
+    throw new Error(
+        `Forecast API failed (${response.status}): ${errorText.substring(0, 200)}`
+    );
+
+}
+
 
 
     const data =
