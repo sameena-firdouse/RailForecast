@@ -3565,7 +3565,7 @@ function updateLiveTrainPositionFromAPI(
     }
 
 
-    const stations =
+    const stationElements =
         network.querySelectorAll(
             ".network-station"
         );
@@ -3620,7 +3620,7 @@ function updateLiveTrainPositionFromAPI(
        FIND CURRENT AND NEXT STATIONS
     ===================================== */
 
-    stations.forEach(station => {
+    stationElements.forEach(station => {
 
 
         const stationCode =
