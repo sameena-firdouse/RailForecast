@@ -55,9 +55,9 @@ async function loadLiveForecast(
 ) {
 
     const url =
-    apiUrl(
-        `/api/forecast/${encodeURIComponent(trainNumber)}?date=${encodeURIComponent(date)}`
-    );
+        apiUrl(
+            `/api/forecast?train=${encodeURIComponent(trainNumber)}&date=${encodeURIComponent(date)}`
+        );
 
     console.log(
         "Loading live forecast:",
@@ -67,19 +67,6 @@ async function loadLiveForecast(
 
     const response =
         await fetch(url);
-    if (!response.ok) {
-    const errorText = await response.text();
-
-    console.error(
-        "API request failed:",
-        response.status,
-        errorText
-    );
-
-    throw new Error(
-        `Forecast API failed with status ${response.status}`
-    );
-}
 
 
     const data =
@@ -3578,7 +3565,7 @@ function updateLiveTrainPositionFromAPI(
     }
 
 
-    const stationElements =
+    const stations =
         network.querySelectorAll(
             ".network-station"
         );
@@ -3633,7 +3620,7 @@ function updateLiveTrainPositionFromAPI(
        FIND CURRENT AND NEXT STATIONS
     ===================================== */
 
-    stationElements.forEach(station => {
+    stations.forEach(station => {
 
 
         const stationCode =
