@@ -3491,7 +3491,18 @@ function updateLiveTrainPositionFromAPI(
             ).toUpperCase();
         }
     }
+    const network =
+    document.getElementById("rail-network");
 
+if (!network) {
+
+    console.warn(
+        "Rail network element not found"
+    );
+
+    return;
+
+}
     const stationElements =
         Array.from(
             network.querySelectorAll(".network-station")
