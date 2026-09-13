@@ -19,7 +19,7 @@ const API_BASE =
     window.location.hostname === "localhost" ||
     window.location.hostname === "127.0.0.1"
         ? "http://127.0.0.1:5000"
-        : (window.RAILFORECAST_API || "https://railforecast.onrender.com");
+        : "";
 
 
 /* =========================================
@@ -56,7 +56,7 @@ async function loadLiveForecast(
 
     const url =
         apiUrl(
-            `/api/forecast/${encodeURIComponent(trainNumber)}?date=${encodeURIComponent(date)}`
+            `/api/forecast?train=${encodeURIComponent(trainNumber)}&date=${encodeURIComponent(date)}`
         );
 
     console.log(
@@ -3430,20 +3430,24 @@ function capitalize(text) {
 ========================================= */
 
 function updateLiveTrainPositionFromAPI(
-    routeStations,
+    apiStations,
     train
 ) {
 
     if (!train) {
         return;
     }
-    
-    
+
+    const network =
+        document.getElementById("rail-network");
+
     const trainElement =
         document.getElementById("selected-network-train");
 
     if (!network || !trainElement) {
-        console.log("Rail network or train element not found.");
+        console.log(
+            "Rail network or selected train element not found."
+        );
         return;
     }
 
@@ -3451,13 +3455,13 @@ function updateLiveTrainPositionFromAPI(
         train.current_code ||
         train.currentCode ||
         ""
-    ).toUpperCase();
+    ).trim().toUpperCase();
 
     let nextCode = String(
         train.next_code ||
         train.nextCode ||
         ""
-    ).toUpperCase();
+    ).trim().toUpperCase();
 
     let sectionProgress = Number(
         train.section_progress ??
@@ -3469,76 +3473,80 @@ function updateLiveTrainPositionFromAPI(
         sectionProgress = 0;
     }
 
-    sectionProgress = Math.max(0, Math.min(1, sectionProgress));
+    sectionProgress = Math.max(
+        0,
+        Math.min(1, sectionProgress)
+    );
 
-    if (!nextCode && Array.isArray(routeStations)) {
-        const currentIndex = routeStations.findIndex(
+    if (!nextCode && Array.isArray(apiStations)) {
+        const currentIndex = apiStations.findIndex(
             station => String(
-                station.code || station.station_code || ""
-            ).toUpperCase() === currentCode
+                station.code ||
+                station.station_code ||
+                ""
+            ).trim().toUpperCase() === currentCode
         );
 
         if (
             currentIndex >= 0 &&
-            currentIndex < routeStations.length - 1
+            currentIndex < apiStations.length - 1
         ) {
             nextCode = String(
-                routeStations[currentIndex + 1].code ||
-                routeStations[currentIndex + 1].station_code ||
+                apiStations[currentIndex + 1].code ||
+                apiStations[currentIndex + 1].station_code ||
                 ""
-            ).toUpperCase();
+            ).trim().toUpperCase();
         }
     }
-    
 
-if (!network) {
-
-    console.warn(
-        "Rail network element not found"
+    const stationElements = Array.from(
+        network.querySelectorAll(
+            ".network-station"
+        )
     );
 
-    return;
+    const findStationElement = (code) => {
+        if (!code) return null;
 
-}
-    const stationElements =
-        Array.from(
-            network.querySelectorAll(".network-station")
+        return stationElements.find(
+            element => {
+                const node =
+                    element.querySelector(
+                        ".station-node"
+                    );
+
+                const stationCode = String(
+                    node ? node.textContent : ""
+                ).trim().toUpperCase();
+
+                return stationCode === code;
+            }
         );
-
-    const getStationCode = station => {
-        const dataCode = station.dataset.code;
-
-        if (dataCode) {
-            return String(dataCode).trim().toUpperCase();
-        }
-
-        const node = station.querySelector(".station-node");
-
-        return node
-            ? node.textContent.trim().toUpperCase()
-            : "";
     };
 
     const currentElement =
-        stationElements.find(
-            station => getStationCode(station) === currentCode
-        );
+        findStationElement(currentCode);
 
     const nextElement =
-        stationElements.find(
-            station => getStationCode(station) === nextCode
-        );
+        findStationElement(nextCode);
 
     if (!currentElement) {
-        console.log("Current station not found:", currentCode);
+        console.log(
+            "Current station not found in network:",
+            currentCode
+        );
         return;
     }
 
     stationElements.forEach(
-        station => station.classList.remove("active-station")
+        element => element.classList.remove(
+            "active-station"
+        )
     );
 
-    currentElement.classList.add("active-station");
+    currentElement.classList.add(
+        "active-station"
+    );
 
     const networkRect =
         network.getBoundingClientRect();
@@ -3546,37 +3554,45 @@ if (!network) {
     const currentRect =
         currentElement.getBoundingClientRect();
 
-    const startX =
-        currentRect.left - networkRect.left +
-        currentRect.width / 2;
-
-    const startY =
-        currentRect.top - networkRect.top +
+    const startPosition =
+        currentRect.top -
+        networkRect.top +
         currentRect.height / 2;
 
-    let x = startX;
-    let y = startY;
+    let endPosition =
+        startPosition;
 
     if (nextElement) {
         const nextRect =
             nextElement.getBoundingClientRect();
 
-        const endX =
-            nextRect.left - networkRect.left +
-            nextRect.width / 2;
-
-        const endY =
-            nextRect.top - networkRect.top +
+        endPosition =
+            nextRect.top -
+            networkRect.top +
             nextRect.height / 2;
-
-        x = startX + (endX - startX) * sectionProgress;
-        y = startY + (endY - startY) * sectionProgress;
     }
 
-    trainElement.style.left = `${x}px`;
-    trainElement.style.top = `${y}px`;
-    trainElement.style.transform = "translate(-50%, -50%)";
+    const position =
+        startPosition +
+        (endPosition - startPosition) *
+        sectionProgress;
 
+    trainElement.style.top =
+        `${position}px`;
+
+    trainElement.style.left =
+        "50%";
+
+    trainElement.style.transform =
+        "translate(-50%, -50%)";
+
+    trainElement.style.display =
+        "flex";
+
+    trainElement.title =
+        nextCode
+            ? `${currentCode} → ${nextCode}`
+            : currentCode;
 }
 
 
