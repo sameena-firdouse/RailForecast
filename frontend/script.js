@@ -19,7 +19,7 @@ const API_BASE =
     window.location.hostname === "localhost" ||
     window.location.hostname === "127.0.0.1"
         ? "http://127.0.0.1:5000"
-        : "";
+        : "https://railforecast.onrender.com";
 
 
 /* =========================================
@@ -3641,49 +3641,30 @@ async function clearActiveEvents() {
             method: "DELETE"
         }
     );
-   if (!response.ok) {
 
-    const errorText = await response.text();
+    if (!response.ok) {
 
-    throw new Error(
-        `Forecast API failed (${response.status}): ${errorText}`
-    );
+        const errorText = await response.text();
 
-}
+        throw new Error(
+            `Failed to clear events (${response.status}): ${errorText}`
+        );
+
+    }
+
     const data = await response.json();
 
-    if (!response.ok || !data.success) {
+    if (!data.success) {
 
         throw new Error(
             data.error ||
             "Failed to clear events"
         );
+
     }
 
     return data;
 }
-async function clearActiveEvents() {
-
-    const response = await fetch(
-        apiUrl("/api/events"),
-        {
-            method: "DELETE"
-        }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok || !data.success) {
-
-        throw new Error(
-            data.error ||
-            "Failed to clear events"
-        );
-    }
-
-    return data;
-}
-
 
 /* =========================================
    LIVE AUTO REFRESH
