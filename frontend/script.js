@@ -19,7 +19,7 @@ const API_BASE =
     window.location.hostname === "localhost" ||
     window.location.hostname === "127.0.0.1"
         ? "http://127.0.0.1:5000"
-        : "https://railforecast.onrender.com";
+        : (window.RAILFORECAST_API || "");
 
 
 /* =========================================
@@ -47,6 +47,18 @@ function apiUrl(path) {
 
 /* =========================================
    LOAD LIVE FORECAST
+
+   Calls the real backend contract:
+   GET /api/forecast/<train>?date=YYYY-MM-DD
+
+   The backend response shape is:
+   { success, train, predictions, generated_at, source }
+
+   Active events are NOT included in the
+   forecast response - they live behind
+   GET /api/events, so we fetch both
+   together and merge them into one object
+   the rest of the UI can consume.
 ========================================= */
 
 async function loadLiveForecast(
@@ -54,10 +66,15 @@ async function loadLiveForecast(
     date
 ) {
 
+    const params =
+        date
+            ? `?date=${encodeURIComponent(date)}`
+            : "";
+
     const url =
-    apiUrl(
-        `/api/forecast/${encodeURIComponent(trainNumber)}?date=${encodeURIComponent(date)}`
-    );
+        apiUrl(
+            `/api/forecast/${encodeURIComponent(trainNumber)}${params}`
+        );
 
     console.log(
         "Loading live forecast:",
@@ -65,42 +82,20 @@ async function loadLiveForecast(
     );
 
 
-    const response = await fetch(url);
+    const [
+        response,
+        activeEvents
+    ] = await Promise.all([
 
-const responseText = await response.text();
+        fetch(url),
 
-if (!response.ok) {
+        loadActiveEvents()
 
-    console.error(
-        "Forecast API error:",
-        response.status,
-        responseText
-    );
+    ]);
 
-    throw new Error(
-        `Forecast API failed with status ${response.status}`
-    );
 
-}
-
-let data;
-
-try {
-
-    data = JSON.parse(responseText);
-
-} catch (err) {
-
-    console.error(
-        "Server returned non-JSON:",
-        responseText
-    );
-
-    throw new Error(
-        "Server returned an invalid response"
-    );
-
-}
+    const data =
+        await response.json();
 
 
     if (
@@ -119,7 +114,210 @@ try {
     }
 
 
+    /* =====================================
+       NORMALIZE INTO THE SHAPE THE REST
+       OF THE UI EXPECTS
+    ===================================== */
+
+    data.forecast =
+        mapPredictionsToStations(
+            data.predictions || [],
+            data.train || {}
+        );
+
+    data.events =
+        mapEventsToImpacts(
+            activeEvents
+        );
+
+    data.train =
+        buildTrainView(
+            data.train || {},
+            data.predictions || []
+        );
+
+
     return data;
+
+}
+
+
+/* =========================================
+   MAP BACKEND "PREDICTIONS" (SECTIONS)
+   INTO PER-STATION TIMELINE ROWS
+
+   Each prediction entry represents a
+   section (from_station -> to_station).
+   The timeline/network UI wants one row
+   per station along the remaining route,
+   so we lead with the train's current
+   position and then use each section's
+   destination as the next row.
+========================================= */
+
+function mapPredictionsToStations(
+    predictions,
+    train
+) {
+
+    const stations = [];
+
+    stations.push({
+
+        station:
+            train.current_name ||
+            "Current location",
+
+        code:
+            train.current_code ||
+            "",
+
+        scheduled: "--",
+
+        predicted: "--",
+
+        delay:
+            Number(
+                train.delay ?? 0
+            ),
+
+        status: "Current"
+
+    });
+
+    predictions.forEach(section => {
+
+        stations.push({
+
+            station:
+                section.to_station ||
+                "Unknown Station",
+
+            code:
+                section.to_code ||
+                "",
+
+            scheduled:
+                section.scheduled_eta ||
+                "--",
+
+            predicted:
+                section.predicted_eta ||
+                "--",
+
+            delay:
+                Number(
+                    section.predicted_delay_min ?? 0
+                ),
+
+            status:
+                section.status ||
+                "Upcoming"
+
+        });
+
+    });
+
+    return stations;
+
+}
+
+
+/* =========================================
+   ALIAS THE LIVE TRAIN OBJECT SO EXISTING
+   RENDER FUNCTIONS (WHICH LOOK FOR
+   current_station / current_delay /
+   next_station) KEEP WORKING AGAINST THE
+   REAL BACKEND FIELD NAMES
+   (current_name / delay / next_name).
+========================================= */
+
+function buildTrainView(
+    train,
+    predictions
+) {
+
+    const lastSection =
+        predictions.length
+            ? predictions[predictions.length - 1]
+            : null;
+
+    return {
+
+        ...train,
+
+        current_station:
+            train.current_name || "",
+
+        current_delay:
+            Number(
+                train.delay ?? 0
+            ),
+
+        next_station:
+            train.next_name || "",
+
+        from:
+            train.current_name || "",
+
+        to:
+            lastSection
+                ? lastSection.to_station
+                : (train.next_name || "")
+
+    };
+
+}
+
+
+/* =========================================
+   MAP ACTIVE EVENTS (FROM /api/events)
+   INTO THE IMPACT SHAPE renderImpacts()
+   ALREADY KNOWS HOW TO READ.
+
+   Active events store current_impact_min
+   and normal_impact_min separately - the
+   part that actually delays the train is
+   the impact ABOVE the historical normal,
+   same logic the backend's unified delay
+   engine uses.
+========================================= */
+
+function mapEventsToImpacts(events) {
+
+    return (events || []).map(event => {
+
+        const current =
+            Number(
+                event.current_impact_min ?? 0
+            );
+
+        const normal =
+            Number(
+                event.normal_impact_min ?? 0
+            );
+
+        return {
+
+            ...event,
+
+            impact:
+                Math.max(
+                    0,
+                    current - normal
+                ),
+
+            feature:
+                event.feature ||
+                "Railway Event",
+
+            section:
+                event.section ||
+                ""
+
+        };
+
+    });
 
 }
 /* =========================================
@@ -910,6 +1108,13 @@ async function forecast() {
             });
 
         }
+
+
+        /* =================================
+           KEEP THE FORECAST LIVE
+        ================================= */
+
+        startLiveRefresh();
 
 
     }
@@ -2495,7 +2700,7 @@ function getValue(id) {
    RUN SIMULATION
 ========================================= */
 
-function runSimulation() {
+async function runSimulation() {
 
 
     if (!currentSimulation) {
@@ -2533,6 +2738,23 @@ function runSimulation() {
     let explanation = "";
 
     let affectedSection = "";
+
+    /* =====================================
+       PAYLOAD SENT TO THE LIVE BACKEND
+       (/api/simulation/event). Filled in
+       per-feature below and, once set,
+       actually pushes this simulation into
+       the RailForecast Unified Delay Engine
+       instead of only showing a local
+       client-side estimate.
+    ===================================== */
+
+    let simPayload = null;
+
+    const simTrain =
+        getValue(
+            "sim-train"
+        );
 
 
     /* =====================================
@@ -2613,6 +2835,32 @@ function runSimulation() {
         explanation =
             `${condition} is affecting train movement and signal clearance in the selected section.`;
 
+
+        let severity = "medium";
+
+        if (condition === "Signal Failure") {
+            severity = "high";
+        } else if (condition === "Temporary Signal Hold") {
+            severity = "low";
+        }
+
+
+        simPayload = {
+
+            feature: "signal_halt",
+
+            train_id: simTrain,
+
+            section: affectedSection,
+
+            signal_status: condition,
+
+            severity: severity,
+
+            expected_deviation_min: delay
+
+        };
+
     }
 
 
@@ -2686,6 +2934,23 @@ function runSimulation() {
         explanation =
             `${trains} trains ahead are creating ${traffic.toLowerCase()} traffic congestion and increasing waiting time.`;
 
+
+        simPayload = {
+
+            feature: "congestion",
+
+            train_id: simTrain,
+
+            section: affectedSection,
+
+            congestion_level: traffic.toLowerCase(),
+
+            trains_ahead: trains,
+
+            queue_waiting_time_min: trains * 3
+
+        };
+
     }
 
 
@@ -2727,6 +2992,25 @@ function runSimulation() {
 
         explanation =
             `Delay propagation from Train ${precedingTrain} is reducing route availability for your train.`;
+
+
+        simPayload = {
+
+            feature: "preceding_train",
+
+            affected_train_id: simTrain,
+
+            preceding_train_id: precedingTrain,
+
+            section: affectedSection,
+
+            preceding_train_delay_min: precedingDelay,
+
+            distance_ahead_km: 5,
+
+            section_status: "occupied"
+
+        };
 
     }
 
@@ -2821,6 +3105,25 @@ function runSimulation() {
         explanation =
             `Speed is reduced from ${normalSpeed} km/h to ${restrictedSpeed} km/h over a distance of ${distance} km.`;
 
+
+        simPayload = {
+
+            feature: "temporary_speed_restriction",
+
+            train_id: simTrain,
+
+            section: affectedSection,
+
+            tsr_distance_km: distance,
+
+            normal_speed_kmph: normalSpeed,
+
+            restricted_speed_kmph: restrictedSpeed,
+
+            tsr_status: "active"
+
+        };
+
     }
 
 
@@ -2906,6 +3209,34 @@ function runSimulation() {
 
         explanation =
             `${maintenanceType} is temporarily reducing route availability in the affected railway section.`;
+
+
+        let maintenanceSeverity = "medium";
+
+        if (maintenanceType === "Emergency Repair") {
+            maintenanceSeverity = "high";
+        } else if (maintenanceType === "Track Inspection") {
+            maintenanceSeverity = "low";
+        }
+
+
+        simPayload = {
+
+            feature: "unscheduled_maintenance",
+
+            train_id: simTrain,
+
+            section: affectedSection,
+
+            maintenance_type: maintenanceType,
+
+            block_type: "complete",
+
+            severity: maintenanceSeverity,
+
+            estimated_repair_duration_min: duration
+
+        };
 
     }
 
@@ -2993,6 +3324,27 @@ function runSimulation() {
         explanation =
             `${status} is increasing train waiting time near the affected level crossing.`;
 
+
+        const gateStatus =
+            status === "Normal Operation"
+                ? "open"
+                : "closed";
+
+
+        simPayload = {
+
+            feature: "level_crossing",
+
+            train_id: simTrain,
+
+            section: affectedSection,
+
+            gate_status: gateStatus,
+
+            remaining_gate_closure_time_min: crossingDelay
+
+        };
+
     }
 
 
@@ -3074,6 +3426,25 @@ function runSimulation() {
         explanation =
             `Available route capacity at ${affectedSection} is ${capacity}% with ${trains} trains waiting for clearance.`;
 
+
+        simPayload = {
+
+            feature: "operational_bottleneck",
+
+            train_id: simTrain,
+
+            section: affectedSection,
+
+            trains_ahead: trains,
+
+            average_headway_min: 5,
+
+            section_occupancy_percent: 100 - capacity,
+
+            capacity_reduction_percent: 100 - capacity
+
+        };
+
     }
 
 
@@ -3082,6 +3453,57 @@ function runSimulation() {
             0,
             impact
         );
+
+
+    /* =====================================
+       PUSH THIS SIMULATION TO THE LIVE
+       BACKEND SO IT ACTUALLY AFFECTS THE
+       UNIFIED DELAY ENGINE, NOT JUST THIS
+       LOCAL PREVIEW PANEL.
+    ===================================== */
+
+    let liveStatus =
+        "This simulation was not sent to the live delay engine.";
+
+    if (simPayload) {
+
+        try {
+
+            await submitSimulationEvent(
+                simPayload
+            );
+
+            liveStatus =
+                "✅ Pushed live: this event is now active in the RailForecast Unified Delay Engine and will affect forecasts for trains routed through this section.";
+
+
+            /* =============================
+               IF THE PASSENGER SCREEN HAS
+               THIS SAME TRAIN LOADED,
+               REFRESH ITS FORECAST SO THE
+               NEW EVENT SHOWS UP IMMEDIATELY.
+            ============================= */
+
+            if (
+                liveTrainData &&
+                simTrain &&
+                String(
+                    liveTrainData.number
+                ) === String(simTrain)
+            ) {
+
+                forecast();
+
+            }
+
+        } catch (err) {
+
+            liveStatus =
+                `⚠️ Could not push this simulation live: ${err.message}`;
+
+        }
+
+    }
 
 
     const currentDelay =
@@ -3253,6 +3675,15 @@ const updatedDelay =
 
             </p>
 
+
+        </div>
+
+
+        <div class="simulation-live-status">
+
+            <p>
+                ${liveStatus}
+            </p>
 
         </div>
 
@@ -3460,107 +3891,453 @@ function capitalize(text) {
 ========================================= */
 
 function updateLiveTrainPositionFromAPI(
-    stations = [],
-    train = {}
+    stations,
+    train
 ) {
-    const network = document.getElementById("rail-network");
 
-    if (!network || !train) {
-        console.log("Rail network or train data not available.");
+
+    if (!train) {
+
         return;
+
     }
 
-    const stationElements = network.querySelectorAll(".network-station");
-    if (!stationElements.length) {
-        console.log("Rail network stations have not been rendered yet.");
-        return;
+
+    const currentCode =
+
+        train.current_code ||
+
+        train.currentCode ||
+
+        "";
+
+
+    const nextCode =
+
+        train.next_code ||
+
+        train.nextCode ||
+
+        "";
+
+
+    let sectionProgress =
+
+        Number(
+
+            train.section_progress ??
+
+            train.sectionProgress ??
+
+            0
+
+        );
+
+
+    /* =====================================
+       FIND NEXT CODE IF API DOESN'T RETURN IT
+    ===================================== */
+
+    let nextStationCode =
+        nextCode;
+
+
+    if (!nextStationCode) {
+
+
+        const currentIndex =
+
+            stations.findIndex(
+                station =>
+
+                    (
+
+                        station.code ||
+
+                        station.station_code
+
+                    ) === currentCode
+            );
+
+
+        if (
+
+            currentIndex >= 0 &&
+
+            currentIndex < stations.length - 1
+
+        ) {
+
+
+            nextStationCode =
+
+                stations[
+                    currentIndex + 1
+                ].code ||
+
+                stations[
+                    currentIndex + 1
+                ].station_code;
+
+        }
+
     }
 
-    const currentCode = String(
-        train.current_code || train.currentCode || ""
-    ).trim().toUpperCase();
 
-    let nextCode = String(
-        train.next_code || train.nextCode || ""
-    ).trim().toUpperCase();
+    /* =====================================
+       FALLBACK
+    ===================================== */
 
-    let progress = Number(
-        train.section_progress ?? train.sectionProgress ?? 0
-    );
+    if (
 
-    if (!Number.isFinite(progress)) progress = 0;
-    progress = Math.max(0, Math.min(1, progress));
+        sectionProgress < 0 ||
 
-    let currentIndex = -1;
-    let nextIndex = -1;
+        sectionProgress > 1
 
-    stationElements.forEach((stationElement, index) => {
-        const code = String(stationElement.dataset.code || "")
-            .trim()
-            .toUpperCase();
+    ) {
 
-        stationElement.classList.remove("current-network-station");
+        sectionProgress =
+            0;
 
-        if (code === currentCode) {
-            currentIndex = index;
-            stationElement.classList.add("current-network-station");
+    }
+
+
+    /* =====================================
+       LOCATE THE NETWORK CONTAINER AND
+       THE LIVE TRAIN MARKER
+       (both created in renderRailwayNetwork)
+    ===================================== */
+
+    const network =
+        document.getElementById(
+            "rail-network"
+        );
+
+
+    const trainMarker =
+        document.getElementById(
+            "live-network-train"
+        );
+
+
+    if (
+        !network ||
+        !trainMarker
+    ) {
+
+        console.log(
+            "Rail network or train marker not found."
+        );
+
+        return;
+
+    }
+
+
+    const stationElements =
+        network.querySelectorAll(
+            ".network-station"
+        );
+
+
+    let currentElement =
+        null;
+
+
+    let nextElement =
+        null;
+
+
+    /* =====================================
+       FIND CURRENT AND NEXT STATIONS
+       BY STATION CODE
+    ===================================== */
+
+    stationElements.forEach(station => {
+
+
+        const stationCode =
+            station.dataset.code ||
+            "";
+
+
+        if (
+            currentCode &&
+            stationCode === currentCode
+        ) {
+
+            currentElement =
+                station;
+
         }
 
-        if (code === nextCode) {
-            nextIndex = index;
+
+        if (
+            nextStationCode &&
+            stationCode === nextStationCode
+        ) {
+
+            nextElement =
+                station;
+
         }
+
+
     });
 
-    if (currentIndex === -1 && Array.isArray(stations)) {
-        currentIndex = stations.findIndex((station) => {
-            const code = String(
-                station.code || station.station_code || ""
-            ).trim().toUpperCase();
-            return code === currentCode;
-        });
-    }
 
-    if (!nextCode && currentIndex >= 0 && currentIndex < stationElements.length - 1) {
-        nextIndex = currentIndex + 1;
-    }
+    /* =====================================
+       CURRENT STATION NOT FOUND
+    ===================================== */
 
-    const trainMarker = document.getElementById("live-network-train");
+    if (!currentElement) {
 
-    if (!trainMarker) {
-        console.log("Live train marker not found.");
+        console.log(
+            "Current station not found:",
+            currentCode
+        );
+
         return;
+
     }
 
-    if (currentIndex < 0) {
-        trainMarker.style.display = "none";
-        return;
+
+    /* =====================================
+       GET NETWORK POSITION
+    ===================================== */
+
+    const networkRect =
+        network.getBoundingClientRect();
+
+
+    const currentRect =
+        currentElement.getBoundingClientRect();
+
+
+    const startPosition =
+
+        currentRect.top
+
+        -
+
+        networkRect.top
+
+        +
+
+        (
+            currentRect.height / 2
+        );
+
+
+    let endPosition =
+        startPosition;
+
+
+    /* =====================================
+       NEXT STATION POSITION
+    ===================================== */
+
+    if (nextElement) {
+
+
+        const nextRect =
+            nextElement.getBoundingClientRect();
+
+
+        endPosition =
+
+            nextRect.top
+
+            -
+
+            networkRect.top
+
+            +
+
+            (
+                nextRect.height / 2
+            );
+
+
     }
 
-    trainMarker.style.display = "block";
 
-    const currentElement = stationElements[currentIndex];
-    const targetElement =
-        nextIndex >= 0 && nextIndex < stationElements.length
-            ? stationElements[nextIndex]
-            : currentElement;
+    /* =====================================
+       CALCULATE LIVE TRAIN POSITION
+    ===================================== */
 
-    const currentTop = currentElement.offsetTop + currentElement.offsetHeight / 2;
-    const targetTop = targetElement.offsetTop + targetElement.offsetHeight / 2;
-    const markerTop = currentTop + (targetTop - currentTop) * progress;
+    const trainPosition =
 
-    trainMarker.style.position = "absolute";
-    trainMarker.style.top = `${markerTop}px`;
+        startPosition
 
-    if (nextIndex >= 0) {
-        trainMarker.title = `Current: ${currentCode || "Unknown"} → Next: ${nextCode || "Unknown"}`;
-    } else {
-        trainMarker.title = `Current: ${currentCode || "Unknown"}`;
-    }
+        +
+
+        (
+
+            endPosition
+
+            -
+
+            startPosition
+
+        )
+
+        *
+
+        sectionProgress;
+
+
+    /* =====================================
+       MOVE TRAIN MARKER
+    ===================================== */
+
+    trainMarker.style.position =
+        "absolute";
+
+    trainMarker.style.top =
+        `${trainPosition}px`;
+
+
+    console.log(
+
+        "Train moved to:",
+
+        currentCode,
+
+        "→",
+
+        nextStationCode,
+
+        "| Progress:",
+
+        sectionProgress
+
+    );
+
 }
 
-function apiUrl(path) {
-    return `${API_BASE}${path}`;
-}
+
+/* =========================================
+   INITIALIZATION
+========================================= */
+
+document.addEventListener(
+
+    "DOMContentLoaded",
+
+    () => {
+
+
+        /* =====================================
+           DEFAULT DATE
+        ===================================== */
+
+        const dateInput =
+            document.getElementById(
+                "date"
+            );
+
+
+        if (dateInput) {
+
+
+            const today =
+                new Date();
+
+
+            const year =
+                today.getFullYear();
+
+
+            const month =
+                String(
+
+                    today.getMonth() + 1
+
+                ).padStart(
+                    2,
+                    "0"
+                );
+
+
+            const day =
+                String(
+
+                    today.getDate()
+
+                ).padStart(
+                    2,
+                    "0"
+                );
+
+
+            dateInput.value =
+                `${year}-${month}-${day}`;
+
+        }
+
+
+        /* =====================================
+           ENTER KEY SEARCH
+        ===================================== */
+
+        const trainInput =
+            document.getElementById(
+                "train"
+            );
+
+
+        if (trainInput) {
+
+
+            trainInput.addEventListener(
+
+                "keydown",
+
+                event => {
+
+
+                    if (
+
+                        event.key ===
+                        "Enter"
+
+                    ) {
+
+                        forecast();
+
+                    }
+
+
+                }
+
+            );
+
+        }
+
+
+        /* =====================================
+           ENSURE HOME PAGE IS VISIBLE
+        ===================================== */
+
+        const homeScreen =
+            document.getElementById(
+                "home"
+            );
+
+
+        if (homeScreen) {
+
+            homeScreen.classList.remove(
+                "hide"
+            );
+
+        }
+
+
+    }
+
+);
 async function loadActiveEvents() {
 
     try {
@@ -3642,29 +4419,19 @@ async function clearActiveEvents() {
         }
     );
 
-    if (!response.ok) {
-
-        const errorText = await response.text();
-
-        throw new Error(
-            `Failed to clear events (${response.status}): ${errorText}`
-        );
-
-    }
-
     const data = await response.json();
 
-    if (!data.success) {
+    if (!response.ok || !data.success) {
 
         throw new Error(
             data.error ||
             "Failed to clear events"
         );
-
     }
 
     return data;
 }
+
 
 /* =========================================
    LIVE AUTO REFRESH
