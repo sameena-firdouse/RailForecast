@@ -65,17 +65,16 @@ async function loadLiveForecast(
     );
 
 
-    const response =
-        await fetch(url);
+    const response = await fetch(url);
 
-    if (!response.ok) {
+const responseText = await response.text();
 
-    const errorText = await response.text();
+if (!response.ok) {
 
     console.error(
         "Forecast API error:",
         response.status,
-        errorText
+        responseText
     );
 
     throw new Error(
@@ -83,8 +82,25 @@ async function loadLiveForecast(
     );
 
 }
-    const data =
-        await response.json();
+
+let data;
+
+try {
+
+    data = JSON.parse(responseText);
+
+} catch (err) {
+
+    console.error(
+        "Server returned non-JSON:",
+        responseText
+    );
+
+    throw new Error(
+        "Server returned an invalid response"
+    );
+
+}
 
 
     if (
