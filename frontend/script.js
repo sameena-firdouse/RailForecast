@@ -19,7 +19,7 @@ const API_BASE =
     window.location.hostname === "localhost" ||
     window.location.hostname === "127.0.0.1"
         ? "http://127.0.0.1:5000"
-        : "https://railforecast.onrender.com";
+        : (window.RAILFORECAST_API || "https://railforecast.onrender.com");
 
 
 /* =========================================
@@ -55,9 +55,9 @@ async function loadLiveForecast(
 ) {
 
     const url =
-    apiUrl(
-        `/api/forecast/${encodeURIComponent(trainNumber)}?date=${encodeURIComponent(date)}`
-    );
+        apiUrl(
+            `/api/forecast/${encodeURIComponent(trainNumber)}?date=${encodeURIComponent(date)}`
+        );
 
     console.log(
         "Loading live forecast:",
@@ -67,18 +67,6 @@ async function loadLiveForecast(
 
     const response =
         await fetch(url);
-   
-
-if (!response.ok) {
-
-    const errorText = await response.text();
-
-    throw new Error(
-        `Forecast API failed (${response.status}): ${errorText.substring(0, 200)}`
-    );
-
-}
-
 
 
     const data =
@@ -3551,21 +3539,6 @@ function updateLiveTrainPositionFromAPI(
             0;
 
     }
-
-
-    updateLiveTrainPosition(
-
-        currentCode,
-
-        nextStationCode,
-
-        sectionProgress
-
-    );
-
-
-
-
     if (!network || !train) {
 
         console.log(
@@ -3610,13 +3583,13 @@ function updateLiveTrainPositionFromAPI(
 
     const normalizedCurrent =
         normalizeStation(
-            currentStation
+            currentCode
         );
 
 
     const normalizedNext =
         normalizeStation(
-            nextStation
+            nextStationCode
         );
 
 
@@ -3710,7 +3683,7 @@ function updateLiveTrainPositionFromAPI(
 
         console.log(
             "Current station not found:",
-            currentStation
+            currentCode
         );
 
         return;
