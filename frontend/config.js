@@ -1,1 +1,1 @@
-window.RAILFORECAST_API = "https://railforecast-backend.onrender.com";
+window.RAILFORECAST_API = "https://railforecast.onrender.com";
