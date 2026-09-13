@@ -3430,293 +3430,104 @@ function capitalize(text) {
 ========================================= */
 
 function updateLiveTrainPositionFromAPI(
-    apiStations,
-    train
+    stations = [],
+    train = {}
 ) {
+    const network = document.getElementById("rail-network");
 
-    if (!train) {
+    if (!network || !train) {
+        console.log("Rail network or train data not available.");
         return;
     }
 
-    const network =
-        document.getElementById("rail-network");
-
-    const trainElement =
-        document.getElementById("selected-network-train");
-
-    if (!network || !trainElement) {
-        console.log(
-            "Rail network or selected train element not found."
-        );
+    const stationElements = network.querySelectorAll(".network-station");
+    if (!stationElements.length) {
+        console.log("Rail network stations have not been rendered yet.");
         return;
     }
 
     const currentCode = String(
-        train.current_code ||
-        train.currentCode ||
-        ""
+        train.current_code || train.currentCode || ""
     ).trim().toUpperCase();
 
     let nextCode = String(
-        train.next_code ||
-        train.nextCode ||
-        ""
+        train.next_code || train.nextCode || ""
     ).trim().toUpperCase();
 
-    let sectionProgress = Number(
-        train.section_progress ??
-        train.sectionProgress ??
-        0
+    let progress = Number(
+        train.section_progress ?? train.sectionProgress ?? 0
     );
 
-    if (!Number.isFinite(sectionProgress)) {
-        sectionProgress = 0;
-    }
+    if (!Number.isFinite(progress)) progress = 0;
+    progress = Math.max(0, Math.min(1, progress));
 
-    sectionProgress = Math.max(
-        0,
-        Math.min(1, sectionProgress)
-    );
+    let currentIndex = -1;
+    let nextIndex = -1;
 
-    if (!nextCode && Array.isArray(apiStations)) {
-        const currentIndex = apiStations.findIndex(
-            station => String(
-                station.code ||
-                station.station_code ||
-                ""
-            ).trim().toUpperCase() === currentCode
-        );
+    stationElements.forEach((stationElement, index) => {
+        const code = String(stationElement.dataset.code || "")
+            .trim()
+            .toUpperCase();
 
-        if (
-            currentIndex >= 0 &&
-            currentIndex < apiStations.length - 1
-        ) {
-            nextCode = String(
-                apiStations[currentIndex + 1].code ||
-                apiStations[currentIndex + 1].station_code ||
-                ""
-            ).trim().toUpperCase();
+        stationElement.classList.remove("current-network-station");
+
+        if (code === currentCode) {
+            currentIndex = index;
+            stationElement.classList.add("current-network-station");
         }
+
+        if (code === nextCode) {
+            nextIndex = index;
+        }
+    });
+
+    if (currentIndex === -1 && Array.isArray(stations)) {
+        currentIndex = stations.findIndex((station) => {
+            const code = String(
+                station.code || station.station_code || ""
+            ).trim().toUpperCase();
+            return code === currentCode;
+        });
     }
 
-    const stationElements = Array.from(
-        network.querySelectorAll(
-            ".network-station"
-        )
-    );
+    if (!nextCode && currentIndex >= 0 && currentIndex < stationElements.length - 1) {
+        nextIndex = currentIndex + 1;
+    }
 
-    const findStationElement = (code) => {
-        if (!code) return null;
+    const trainMarker = document.getElementById("live-network-train");
 
-        return stationElements.find(
-            element => {
-                const node =
-                    element.querySelector(
-                        ".station-node"
-                    );
-
-                const stationCode = String(
-                    node ? node.textContent : ""
-                ).trim().toUpperCase();
-
-                return stationCode === code;
-            }
-        );
-    };
-
-    const currentElement =
-        findStationElement(currentCode);
-
-    const nextElement =
-        findStationElement(nextCode);
-
-    if (!currentElement) {
-        console.log(
-            "Current station not found in network:",
-            currentCode
-        );
+    if (!trainMarker) {
+        console.log("Live train marker not found.");
         return;
     }
 
-    stationElements.forEach(
-        element => element.classList.remove(
-            "active-station"
-        )
-    );
-
-    currentElement.classList.add(
-        "active-station"
-    );
-
-    const networkRect =
-        network.getBoundingClientRect();
-
-    const currentRect =
-        currentElement.getBoundingClientRect();
-
-    const startPosition =
-        currentRect.top -
-        networkRect.top +
-        currentRect.height / 2;
-
-    let endPosition =
-        startPosition;
-
-    if (nextElement) {
-        const nextRect =
-            nextElement.getBoundingClientRect();
-
-        endPosition =
-            nextRect.top -
-            networkRect.top +
-            nextRect.height / 2;
+    if (currentIndex < 0) {
+        trainMarker.style.display = "none";
+        return;
     }
 
-    const position =
-        startPosition +
-        (endPosition - startPosition) *
-        sectionProgress;
+    trainMarker.style.display = "block";
 
-    trainElement.style.top =
-        `${position}px`;
+    const currentElement = stationElements[currentIndex];
+    const targetElement =
+        nextIndex >= 0 && nextIndex < stationElements.length
+            ? stationElements[nextIndex]
+            : currentElement;
 
-    trainElement.style.left =
-        "50%";
+    const currentTop = currentElement.offsetTop + currentElement.offsetHeight / 2;
+    const targetTop = targetElement.offsetTop + targetElement.offsetHeight / 2;
+    const markerTop = currentTop + (targetTop - currentTop) * progress;
 
-    trainElement.style.transform =
-        "translate(-50%, -50%)";
+    trainMarker.style.position = "absolute";
+    trainMarker.style.top = `${markerTop}px`;
 
-    trainElement.style.display =
-        "flex";
-
-    trainElement.title =
-        nextCode
-            ? `${currentCode} → ${nextCode}`
-            : currentCode;
+    if (nextIndex >= 0) {
+        trainMarker.title = `Current: ${currentCode || "Unknown"} → Next: ${nextCode || "Unknown"}`;
+    } else {
+        trainMarker.title = `Current: ${currentCode || "Unknown"}`;
+    }
 }
 
-
-/* =========================================
-   INITIALIZATION
-========================================= */
-
-document.addEventListener(
-
-    "DOMContentLoaded",
-
-    () => {
-
-
-        /* =====================================
-           DEFAULT DATE
-        ===================================== */
-
-        const dateInput =
-            document.getElementById(
-                "date"
-            );
-
-
-        if (dateInput) {
-
-
-            const today =
-                new Date();
-
-
-            const year =
-                today.getFullYear();
-
-
-            const month =
-                String(
-
-                    today.getMonth() + 1
-
-                ).padStart(
-                    2,
-                    "0"
-                );
-
-
-            const day =
-                String(
-
-                    today.getDate()
-
-                ).padStart(
-                    2,
-                    "0"
-                );
-
-
-            dateInput.value =
-                `${year}-${month}-${day}`;
-
-        }
-
-
-        /* =====================================
-           ENTER KEY SEARCH
-        ===================================== */
-
-        const trainInput =
-            document.getElementById(
-                "train"
-            );
-
-
-        if (trainInput) {
-
-
-            trainInput.addEventListener(
-
-                "keydown",
-
-                event => {
-
-
-                    if (
-
-                        event.key ===
-                        "Enter"
-
-                    ) {
-
-                        forecast();
-
-                    }
-
-
-                }
-
-            );
-
-        }
-
-
-        /* =====================================
-           ENSURE HOME PAGE IS VISIBLE
-        ===================================== */
-
-        const homeScreen =
-            document.getElementById(
-                "home"
-            );
-
-
-        if (homeScreen) {
-
-            homeScreen.classList.remove(
-                "hide"
-            );
-
-        }
-
-
-    }
-
-);
 function apiUrl(path) {
     return `${API_BASE}${path}`;
 }
