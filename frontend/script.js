@@ -3437,7 +3437,8 @@ function updateLiveTrainPositionFromAPI(
     if (!train) {
         return;
     }
-
+    const network =
+    document.getElementById("rail-network");
     
     const trainElement =
         document.getElementById("selected-network-train");
@@ -3489,8 +3490,7 @@ function updateLiveTrainPositionFromAPI(
             ).toUpperCase();
         }
     }
-    const network =
-    document.getElementById("rail-network");
+    
 
 if (!network) {
 
