@@ -3611,7 +3611,15 @@ async function clearActiveEvents() {
             method: "DELETE"
         }
     );
+   if (!response.ok) {
 
+    const errorText = await response.text();
+
+    throw new Error(
+        `Forecast API failed (${response.status}): ${errorText}`
+    );
+
+}
     const data = await response.json();
 
     if (!response.ok || !data.success) {
