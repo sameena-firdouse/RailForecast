@@ -3430,396 +3430,144 @@ function capitalize(text) {
 ========================================= */
 
 function updateLiveTrainPositionFromAPI(
-    stations,
+    routeStations,
     train
 ) {
 
-
     if (!train) {
-
         return;
-
     }
 
+    const network =
+        document.getElementById("rail-network");
 
-    const currentCode =
+    const trainElement =
+        document.getElementById("selected-network-train");
 
+    if (!network || !trainElement) {
+        console.log("Rail network or train element not found.");
+        return;
+    }
+
+    const currentCode = String(
         train.current_code ||
-
         train.currentCode ||
+        ""
+    ).toUpperCase();
 
-        "";
-
-
-    const nextCode =
-
+    let nextCode = String(
         train.next_code ||
-
         train.nextCode ||
+        ""
+    ).toUpperCase();
 
-        "";
+    let sectionProgress = Number(
+        train.section_progress ??
+        train.sectionProgress ??
+        0
+    );
 
+    if (!Number.isFinite(sectionProgress)) {
+        sectionProgress = 0;
+    }
 
-    let sectionProgress =
+    sectionProgress = Math.max(0, Math.min(1, sectionProgress));
 
-        Number(
-
-            train.section_progress ??
-
-            train.sectionProgress ??
-
-            0
-
+    if (!nextCode && Array.isArray(routeStations)) {
+        const currentIndex = routeStations.findIndex(
+            station => String(
+                station.code || station.station_code || ""
+            ).toUpperCase() === currentCode
         );
-
-
-    /* =====================================
-       FIND NEXT CODE IF API DOESN'T RETURN IT
-    ===================================== */
-
-    let nextStationCode =
-        nextCode;
-
-
-    if (!nextStationCode) {
-
-
-        const currentIndex =
-
-            stations.findIndex(
-                station =>
-
-                    (
-
-                        station.code ||
-
-                        station.station_code
-
-                    ) === currentCode
-            );
-
 
         if (
-
             currentIndex >= 0 &&
-
-            currentIndex < stations.length - 1
-
+            currentIndex < routeStations.length - 1
         ) {
-
-
-            nextStationCode =
-
-                stations[
-                    currentIndex + 1
-                ].code ||
-
-                stations[
-                    currentIndex + 1
-                ].station_code;
-
+            nextCode = String(
+                routeStations[currentIndex + 1].code ||
+                routeStations[currentIndex + 1].station_code ||
+                ""
+            ).toUpperCase();
         }
-
     }
-
-
-    /* =====================================
-       FALLBACK
-    ===================================== */
-
-    if (
-
-        sectionProgress < 0 ||
-
-        sectionProgress > 1
-
-    ) {
-
-        sectionProgress =
-            0;
-
-    }
-    if (!network || !train) {
-
-        console.log(
-            "Rail network or train element not found."
-        );
-
-        return;
-
-    }
-
 
     const stationElements =
-        network.querySelectorAll(
-            ".network-station"
+        Array.from(
+            network.querySelectorAll(".network-station")
         );
 
+    const getStationCode = station => {
+        const dataCode = station.dataset.code;
 
-    /* =====================================
-       NORMALIZE STATION NAMES
-    ===================================== */
-
-    function normalizeStation(value) {
-
-        return String(value || "")
-
-            .toUpperCase()
-
-            .replace(
-                /\bJUNCTION\b/g,
-                ""
-            )
-
-            .replace(
-                /\s+/g,
-                " "
-            )
-
-            .trim();
-
-    }
-
-
-    const normalizedCurrent =
-        normalizeStation(
-            currentCode
-        );
-
-
-    const normalizedNext =
-        normalizeStation(
-            nextStationCode
-        );
-
-
-    let currentElement =
-        null;
-
-
-    let nextElement =
-        null;
-
-
-    /* =====================================
-       FIND CURRENT AND NEXT STATIONS
-    ===================================== */
-
-    stationElements.forEach(station => {
-
-
-        const stationCode =
-            normalizeStation(
-                station.dataset.code
-            );
-
-
-        const stationName =
-            normalizeStation(
-                station.innerText
-            );
-
-
-        /* CURRENT STATION */
-
-        if (
-
-            stationCode ===
-            normalizedCurrent ||
-
-            stationName ===
-            normalizedCurrent ||
-
-            stationName.includes(
-                normalizedCurrent
-            ) ||
-
-            normalizedCurrent.includes(
-                stationName
-            )
-
-        ) {
-
-            currentElement =
-                station;
-
+        if (dataCode) {
+            return String(dataCode).trim().toUpperCase();
         }
 
+        const node = station.querySelector(".station-node");
 
-        /* NEXT STATION */
+        return node
+            ? node.textContent.trim().toUpperCase()
+            : "";
+    };
 
-        if (
+    const currentElement =
+        stationElements.find(
+            station => getStationCode(station) === currentCode
+        );
 
-            stationCode ===
-            normalizedNext ||
-
-            stationName ===
-            normalizedNext ||
-
-            stationName.includes(
-                normalizedNext
-            ) ||
-
-            normalizedNext.includes(
-                stationName
-            )
-
-        ) {
-
-            nextElement =
-                station;
-
-        }
-
-
-    });
-
-
-    /* =====================================
-       CURRENT STATION NOT FOUND
-    ===================================== */
+    const nextElement =
+        stationElements.find(
+            station => getStationCode(station) === nextCode
+        );
 
     if (!currentElement) {
-
-        console.log(
-            "Current station not found:",
-            currentCode
-        );
-
+        console.log("Current station not found:", currentCode);
         return;
-
     }
 
+    stationElements.forEach(
+        station => station.classList.remove("active-station")
+    );
 
-    /* =====================================
-       GET NETWORK POSITION
-    ===================================== */
+    currentElement.classList.add("active-station");
 
     const networkRect =
         network.getBoundingClientRect();
 
-
     const currentRect =
         currentElement.getBoundingClientRect();
 
+    const startX =
+        currentRect.left - networkRect.left +
+        currentRect.width / 2;
 
-    const startPosition =
+    const startY =
+        currentRect.top - networkRect.top +
+        currentRect.height / 2;
 
-        currentRect.top
-
-        -
-
-        networkRect.top
-
-        +
-
-        (
-            currentRect.height / 2
-        );
-
-
-    let endPosition =
-        startPosition;
-
-
-    /* =====================================
-       NEXT STATION POSITION
-    ===================================== */
+    let x = startX;
+    let y = startY;
 
     if (nextElement) {
-
-
         const nextRect =
             nextElement.getBoundingClientRect();
 
+        const endX =
+            nextRect.left - networkRect.left +
+            nextRect.width / 2;
 
-        endPosition =
+        const endY =
+            nextRect.top - networkRect.top +
+            nextRect.height / 2;
 
-            nextRect.top
-
-            -
-
-            networkRect.top
-
-            +
-
-            (
-                nextRect.height / 2
-            );
-
-
+        x = startX + (endX - startX) * sectionProgress;
+        y = startY + (endY - startY) * sectionProgress;
     }
 
-
-    /* =====================================
-       KEEP PROGRESS BETWEEN 0 AND 1
-    ===================================== */
-
-    sectionProgress =
-
-        Math.max(
-
-            0,
-
-            Math.min(
-
-                1,
-
-                sectionProgress
-
-            )
-
-        );
-
-
-    /* =====================================
-       CALCULATE LIVE TRAIN POSITION
-    ===================================== */
-
-    const trainPosition =
-
-        startPosition
-
-        +
-
-        (
-
-            endPosition
-
-            -
-
-            startPosition
-
-        )
-
-        *
-
-        sectionProgress;
-
-
-    /* =====================================
-       MOVE TRAIN
-    ===================================== */
-
-    train.style.top =
-        `${trainPosition}px`;
-
-
-    console.log(
-
-        "Train moved to:",
-
-        currentStation,
-
-        "→",
-
-        nextStation,
-
-        "| Progress:",
-
-        sectionProgress
-
-    );
+    trainElement.style.left = `${x}px`;
+    trainElement.style.top = `${y}px`;
+    trainElement.style.transform = "translate(-50%, -50%)";
 
 }
 
