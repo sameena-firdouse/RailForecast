@@ -261,28 +261,41 @@ ETA is treated as a dynamic prediction rather than a fixed value.
 
 Live prediction quality depends on the availability, freshness, accuracy, and fields provided by the connected railway API.
 
-🧪 Simulation Mode
-RailForecast can also simulate railway conditions.
-This allows the system to demonstrate dynamic ETA changes even when live railway data is unavailable.
-For example:
-              Normal Condition
-                     │
-                     ▼
-              Current Delay
-                     │
-                     ▼
-                Prediction
-                     │
-        ┌────────────┼────────────┐
-        ▼            ▼            ▼
-    Congestion   Signal Halt   Recovery
-        │            │            │
-        ▼            ▼            ▼
-    Delay +       Delay +       Delay -
-        │            │            │
-        └────────────┼────────────┘
-                     ▼
-                Updated ETA
+## 🧪 Simulation Mode
+
+RailForecast can also simulate railway conditions. This allows the system to demonstrate dynamic ETA changes even when live railway data is unavailable.
+
+**Simulation Flow:**
+
+                 Normal Condition
+                        │
+                        ▼
+                  Current Delay
+                        │
+                        ▼
+                    Prediction
+                        │
+             ┌──────────┼──────────┐
+             ▼          ▼          ▼
+        Congestion    Signal      Recovery
+             │        Halt          │
+             ▼          ▼          ▼
+          Delay +    Delay +      Delay -
+             │          │          │
+             └──────────┼──────────┘
+                        │
+                        ▼
+                   Updated ETA
+
+**Simulation Scenarios:**
+
+| Scenario | Simulated Effect |
+|----------|------------------|
+| Congestion | Increases expected delay |
+| Signal Halt | Adds waiting time |
+| Recovery | Reduces accumulated delay |
+
+Simulation Mode helps demonstrate how different railway conditions can influence predicted arrival times dynamically.
 
 This provides a practical way to test:
 - Delay increase
