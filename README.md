@@ -26,6 +26,9 @@ RailForecast is designed to estimate and update a train's expected arrival time 
 5. Update the ETA: Process the adjusted delay and produce a final dynamic ETA.
 The objective is not simply to display the current delay. It is to estimate how that delay may change over the remaining journey.
 🧭 System Architecture
+
+<img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/ef857cd7-3a68-4daf-93b0-5eb144e8071a" />
+
 The main screen is divided into two distinct areas:
 - Passenger: Displays train location, current delay, and delay-related information. This is the passenger-facing information section.
 - Railway Department: Contains the simulation module and the railway-authorized API pathway. These are the two input pathways shown feeding the standardized ETA calculation.
@@ -61,6 +64,8 @@ ETA output
 - Updated ETA
 🔬 Dynamic ETA Calculation Pipeline
 The following diagram explains how the prediction stage and condition-adjustment stages work together.
+
+<img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/503e3661-6eae-42ce-8a59-8751af824fdb" />
 
 Step-by-step pipeline
 1. Historical data
