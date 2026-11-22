@@ -366,21 +366,36 @@ Updated ETA
 Passenger Information
 
 The same prediction pipeline can therefore be used continuously throughout the journey.
-🔔 Future Passenger Notifications
-The prediction engine can eventually be connected to notification services.
-                  RailForecast
-                       │
-                       ▼
-                 ETA Prediction
-                       │
-          ┌────────────┼────────────┐
-          ▼            ▼            ▼
-        Website        SMS       Mobile App
-          │            │            │
-          └────────────┼────────────┘
-                       ▼
-                 Passenger Alert
 
+## 🔔 Future Passenger Notifications
+
+The prediction engine can eventually be connected to notification services to keep passengers informed about updated arrival times.
+
+**Notification Flow:**
+
+                   RailForecast
+                        │
+                        ▼
+                   ETA Prediction
+                        │
+              ┌─────────┼─────────┐
+              ▼         ▼         ▼
+           Website     SMS     Mobile App
+              │         │         │
+              └─────────┼─────────┘
+                        │
+                        ▼
+                  Passenger Alert
+
+**Future Notification Channels:**
+
+| Channel | Purpose |
+|---------|---------|
+| Website | Display updated ETA |
+| SMS | Send arrival-time alerts |
+| Mobile App | Provide real-time journey updates |
+
+This feature is planned for future development and aims to help passengers stay informed about changing train arrival times.
 Example:
 🚆 Train 12705
 
