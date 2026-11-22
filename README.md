@@ -413,53 +413,54 @@ Notification delivery is a future expansion depending on available services.
 
 
 
-🔬 Complete Prediction Pipeline
-┌─────────────────────────────┐
-│ Historical Railway Dataset  │
-└──────────────┬──────────────┘
-               │
-               ▼
-┌─────────────────────────────┐
-│ Section-wise Data Analysis  │
-└──────────────┬──────────────┘
-               │
-               ▼
-┌─────────────────────────────┐
-│ Feature Engineering         │
-│                             │
-│ • Current delay             │
-│ • Historical delay change   │
-│ • Delay variation           │
-│ • Section number            │
-│ • Running time              │
-└──────────────┬──────────────┘
-               │
-               ▼
-┌─────────────────────────────┐
-│ Random Forest Model         │
-└──────────────┬──────────────┘
-               │
-               ▼
-┌─────────────────────────────┐
-│ Predicted Section Delay     │
-└──────────────┬──────────────┘
-               │
-               ▼
-┌─────────────────────────────┐
-│ Sequential Delay Propagation│
-└──────────────┬──────────────┘
-               │
-               ▼
-┌─────────────────────────────┐
-│ Updated ETA                 │
-└──────────────┬──────────────┘
-               │
-        ┌──────┴──────┐
-        ▼             ▼
-┌─────────────┐ ┌──────────────┐
-│ Delay       │ │ Passenger    │
-│ Explanation │ │ Information  │
-└─────────────┘ └──────────────┘
+## 🔬 Complete Prediction Pipeline
+
+                 ┌──────────────────────────────┐
+                 │  Historical Railway Dataset  │
+                 └──────────────┬───────────────┘
+                                │
+                                ▼
+                 ┌──────────────────────────────┐
+                 │   Section-wise Data Analysis │
+                 └──────────────┬───────────────┘
+                                │
+                                ▼
+                 ┌──────────────────────────────┐
+                 │       Feature Engineering    │
+                 │                              │
+                 │  • Current delay             │
+                 │  • Historical delay change   │
+                 │  • Delay variation           │
+                 │  • Section number            │
+                 │  • Running time              │
+                 └──────────────┬───────────────┘
+                                │
+                                ▼
+                 ┌──────────────────────────────┐
+                 │      Random Forest Model     │
+                 └──────────────┬───────────────┘
+                                │
+                                ▼
+                 ┌──────────────────────────────┐
+                 │    Predicted Section Delay   │
+                 └──────────────┬───────────────┘
+                                │
+                                ▼
+                 ┌──────────────────────────────┐
+                 │  Sequential Delay Propagation│
+                 └──────────────┬───────────────┘
+                                │
+                                ▼
+                 ┌──────────────────────────────┐
+                 │          Updated ETA         │
+                 └──────────────┬───────────────┘
+                                │
+                       ┌────────┴────────┐
+                       ▼                 ▼
+              ┌────────────────┐  ┌──────────────────┐
+              │     Delay      │  │    Passenger    │
+              │  Explanation   │  │   Information   │
+              └────────────────┘  └──────────────────┘
 
 📈 Model Performance
 The current Random Forest V2 model was evaluated against a baseline approach on the evaluated test period.
