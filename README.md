@@ -96,43 +96,46 @@ Feature	Description
 📈 Model Evaluation	Compares ML predictions against a baseline
 
 
-🗺️ Section-Wise Railway Prediction
-RailForecast does not treat the entire train route as one single block.
-The route is divided into sections.
-For the current prototype, an example route is:
-GNT
- │
- ▼
+## 🗺️ Section-Wise Railway Prediction
+
+RailForecast does not treat the entire train route as one single block. Instead, the route is divided into smaller sections to analyze delay patterns, delay propagation, and possible recovery between stations.
+
+**Example route (current prototype):**
+
+GNT (Guntur)
+       │
+       ▼
 MGL
- │
- ▼
-BZA
- │
- ▼
+       │
+       ▼
+BZA (Vijayawada)
+       │
+       ▼
 MDR
- │
- ▼
-KMT
- │
- ▼
+       │
+       ▼
+KMT (Khammam)
+       │
+       ▼
 DKJ
- │
- ▼
-SC
+       │
+       ▼
+SC (Secunderabad)
 
 Each section can have different delay characteristics.
-For example:
-┌──────────────┬─────────────────────────────┐
-│ Section      │ Possible Behavior           │
-├──────────────┼─────────────────────────────┤
-│ GNT → MGL    │ Delay / recovery            │
-│ MGL → BZA    │ Different delay pattern     │
-│ BZA → MDR    │ Delay propagation           │
-│ MDR → KMT    │ Potential recovery          │
-│ KMT → DKJ    │ Variable delay              │
-│ DKJ → SC     │ Final approach              │
-└──────────────┴─────────────────────────────┘
 
+**Section-wise possible behaviour:**
+
+| Railway Section | Possible Behaviour |
+|-----------------|--------------------|
+| GNT → MGL       | Delay / Recovery |
+| MGL → BZA       | Different Delay Pattern |
+| BZA → MDR       | Delay Propagation |
+| MDR → KMT       | Potential Recovery |
+| KMT → DKJ       | Variable Delay |
+| DKJ → SC        | Final Approach |
+
+By analyzing individual route sections, RailForecast aims to understand how delays evolve throughout the journey and improve overall ETA prediction.
 The actual behavior is learned from the available historical data rather than being manually assumed.
 
 Conceptually:
